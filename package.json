@@ -1,0 +1,25 @@
+{
+  "name": "block-blast",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "build:android": "vite build && npx cap sync android",
+    "open:android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "^8.0.0",
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "phaser": "^4.0.0",
+    "zzfx": "^1.3.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.4.0",
+    "vite": "^6.0.0",
+    "vitest": "^3.0.0"
+  }
+}

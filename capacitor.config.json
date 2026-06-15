@@ -1,0 +1,24 @@
+{
+  "appId": "com.devlancestudio.blockburst",
+  "appName": "Block Burst",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#000000",
+    "allowMixedContent": false,
+    "overScrollMode": "never"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 0,
+      "backgroundColor": "#000000",
+      "showSpinner": false
+    },
+    "AdMob": {
+      "bannerPosition": "BOTTOM_CENTER"
+    }
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
