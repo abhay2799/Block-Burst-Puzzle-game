@@ -1,16 +1,16 @@
-import { zzfx } from 'zzfx';
-
 let muted = false;
+let soundManager = null;
+let currentBGM = null;
 
 try {
   const savedMute = localStorage.getItem('blockblast_muted');
   if (savedMute === 'true') muted = true;
 } catch (e) { /* ignore */ }
 
-function play(params) {
-  if (muted || document.hidden) return;
+function playSFX(key) {
+  if (muted || document.hidden || !soundManager) return;
   try {
-    zzfx(...params);
+    soundManager.play(key);
   } catch (e) { /* audio context not ready */ }
 }
 
@@ -20,13 +20,41 @@ function vibrate(pattern) {
   } catch (e) { /* not supported */ }
 }
 
-function delayedPlay(params, delay) {
+function delayedPlay(key, delay) {
   setTimeout(() => {
-    if (!document.hidden) play(params);
+    if (!document.hidden && !muted && soundManager) {
+      try {
+        soundManager.play(key);
+      } catch (e) {}
+    }
   }, delay);
 }
 
+function speakVoice(text) {
+  if (muted || !window.speechSynthesis) return;
+  const msg = new SpeechSynthesisUtterance(text);
+  msg.rate = 1.1; // Slightly faster for game pacing
+  msg.pitch = 1.2; // Slightly higher pitch for enthusiasm
+  window.speechSynthesis.speak(msg);
+}
+
+function stopSFX(key) {
+  if (!soundManager) return;
+  try {
+    const sounds = soundManager.getAll(key);
+    if (sounds && sounds.length) {
+      sounds.forEach(s => s.stop());
+    }
+  } catch (e) {}
+}
+
 export const SoundManager = {
+  init(scene) {
+    if (!soundManager && scene && scene.sound) {
+      soundManager = scene.sound;
+    }
+  },
+
   isMuted() {
     return muted;
   },
@@ -36,6 +64,13 @@ export const SoundManager = {
     try {
       localStorage.setItem('blockblast_muted', muted.toString());
     } catch (e) { /* ignore */ }
+
+    if (muted && currentBGM) {
+      currentBGM.pause();
+    } else if (!muted && currentBGM) {
+      currentBGM.resume();
+    }
+
     return muted;
   },
 
@@ -44,82 +79,191 @@ export const SoundManager = {
     try {
       localStorage.setItem('blockblast_muted', muted.toString());
     } catch (e) { /* ignore */ }
+
+    if (muted && currentBGM) {
+      currentBGM.pause();
+    } else if (!muted && currentBGM) {
+      currentBGM.resume();
+    }
+  },
+
+  playBGM() {
+    if (!soundManager || document.hidden) return;
+    
+    const startBGM = () => {
+      if (!currentBGM) {
+        try {
+          currentBGM = soundManager.add('bgm', { loop: true, volume: 0.08 });
+          if (!muted) {
+            currentBGM.play();
+          }
+        } catch (e) {}
+      } else if (!currentBGM.isPlaying && !muted) {
+        currentBGM.play();
+      }
+    };
+
+    if (soundManager.locked) {
+      soundManager.once('unlocked', startBGM);
+    } else {
+      startBGM();
+    }
+  },
+
+  stopBGM() {
+    if (currentBGM) {
+      currentBGM.stop();
+    }
+  },
+
+  speak(text) {
+    speakVoice(text);
   },
 
   piecePickup() {
-    play([1.2,,300,.005,.02,.03,1,1.8,,,,,,,,,,.7,.01]);
+    if (soundManager) {
+      soundManager.play('pieceInvalid', { rate: 1.2, volume: 0.8 }); // Pop sound
+    }
     vibrate(15);
   },
 
-  hoverTick() {
-    play([0.2,,900,.005,,.01,1,0.3,,,,,,,,,,,.005]);
+  playGameStart() {
+    playSFX('gameStart');
+    vibrate([20, 40, 20, 60]);
+  },
+
+  startDragSound() {
+    if (!soundManager) return;
+    if (!this.dragLoop) {
+      this.dragLoop = soundManager.add('dragSound', { loop: true, volume: 0 });
+      this.dragLoop.play();
+    } else if (!this.dragLoop.isPlaying) {
+      this.dragLoop.play();
+      this.dragLoop.setVolume(0);
+    }
+  },
+
+  updateDragSound(isInsideBox, speed) {
+    if (!this.dragLoop || !this.dragLoop.isPlaying) return;
+
+    if (isInsideBox && speed > 0.02) {
+      this.dragLoop.setVolume(0.8);
+      if (this.dragLoop.setRate) {
+        this.dragLoop.setRate(1.0 + (speed > 1 ? 0.2 : speed * 0.2));
+      }
+    } else {
+      this.dragLoop.setVolume(0);
+    }
+  },
+
+  stopDragSound() {
+    if (this.dragLoop && this.dragLoop.isPlaying) {
+      this.dragLoop.stop();
+    }
   },
 
   piecePlace() {
-    play([1.5,,120,.01,.04,.12,1,2.5,,,,,,,,,,,.04]);
-    delayedPlay([0.6,,600,.005,.02,.05,1,1.2,,,,,,,,,,,.02], 40);
+    if (soundManager) {
+      soundManager.play('pieceInvalid', { rate: 0.8, volume: 1.2 });
+    }
     vibrate([20, 15, 35]);
   },
 
   pieceInvalid() {
-    play([0.6,,180,.01,.02,.12,3,1.5,,,,,,8,,,,.4,.02]);
+    playSFX('pieceInvalid');
     vibrate([30, 10, 30]);
   },
 
-  lineClear(lineIndex = 0) {
-    const baseFreq = 550 + lineIndex * 120;
-    play([1.2,,baseFreq,.01,.06,.18,1,1.8,,,,,.04,,,,,.85,.04]);
-    delayedPlay([0.8,,baseFreq * 1.5,.005,.04,.1,1,1.2,,,,,,,,,,,.03], 60);
-    vibrate([20, 12, 40]);
-  },
+  handleClearSound(lineCount, comboLevel, clears) {
+    if (lineCount === 0) return;
 
-  multiLineClear(count) {
-    for (let i = 0; i < count; i++) {
-      delayedPlay([1.8,,440 + i * 130,.01,.08,.22,1,1.5,,,250,.04,.08,,,,,.9,.04], i * 70);
-    }
-    delayedPlay([2,,800,.01,.1,.3,1,0.8,,,400,.05,.1,,,,,.9,.06], count * 70 + 50);
-    const pattern = [];
-    for (let i = 0; i < count; i++) {
-      pattern.push(30, 20);
-    }
-    pattern.push(60);
-    vibrate(pattern);
-  },
+    let played = false;
 
-  combo(level) {
-    const freq = 350 + level * 100;
-    play([2.2,,freq,.008,.12,.28,2,2.2,,,,,.04,,,,,.92,.06]);
-    delayedPlay([1.8,,freq * 1.5,.008,.08,.2,1,1.8,,,300,.03,.05,,,,,.85,.05], 90);
-    delayedPlay([1.2,,freq * 2,.005,.06,.15,1,1.2,,,,,,,,,,,.04], 160);
-    vibrate([15, 10, 20, 10, 50]);
+    // 1. Horizontal lines only
+    if (clears && clears.rows && clears.cols) {
+      if (clears.rows.length > 0 && clears.cols.length === 0) {
+        // Creative horizontal clear: a pitch-shifted double-tap of the vertical sound!
+        if (soundManager) {
+          try {
+            soundManager.play('smallBreak', { rate: 0.85, volume: 1.2 });
+            setTimeout(() => {
+              if (soundManager && !muted && !document.hidden) {
+                soundManager.play('smallBreak', { rate: 1.15, volume: 0.9 });
+              }
+            }, 60); // Quick 60ms delay for a satisfying "wide" echo effect
+          } catch(e) {}
+        }
+        vibrate([30, 50, 30]);
+        played = true;
+      }
+    }
+
+    // 2. Combo / Small Breaks
+    if (!played) {
+      if (comboLevel === 2) { // First combo clear
+        playSFX('combo1');
+        vibrate([20, 10, 20]);
+      } else if (comboLevel === 3) { // Second combo clear
+        playSFX('combo2');
+        vibrate([30, 15, 30]);
+      } else if (comboLevel > 3) { // Random for huge combos
+        const randomCombo = ['combo1', 'combo2', 'smallBreak'][Math.floor(Math.random() * 3)];
+        playSFX(randomCombo);
+        vibrate([40, 20, 40]);
+      } else { // Single lines or standard vertical clear
+        playSFX('smallBreak');
+        vibrate([15, 10]);
+      }
+    }
   },
 
   levelComplete() {
-    play([2,,500,.02,.15,.35,1,1.2,,,,,,.1,,,,,.08]);
-    delayedPlay([1.8,,650,.02,.12,.3,1,1,,,,,,,,,,,.06], 150);
-    delayedPlay([2.2,,800,.02,.2,.4,1,0.8,,,200,.05,.1,,,,,.95,.08], 300);
-    delayedPlay([1.5,,1000,.01,.15,.3,1,1.2,,,,,,,,,,,.06], 450);
+    if (!muted && soundManager) {
+      try { soundManager.play('combo2'); } catch(e) {}
+    }
     vibrate([20, 30, 20, 30, 20, 30, 60]);
   },
 
   gameOver() {
-    play([2,,500,.04,.2,.4,1,0.6,,-2,,,.08,,,,.15,.7,.15]);
-    delayedPlay([1.5,,350,.04,.25,.5,1,0.5,,-3,,,.06,,,,.1,.5,.2], 350);
-    delayedPlay([1.2,,200,.05,.3,.6,1,0.4,,-2,,,.05,,,,.08,.4,.25], 700);
+    if (!muted && soundManager) {
+      try { soundManager.play('gameOver', { volume: 1.0 }); } catch(e) {}
+    }
     vibrate([60, 50, 100, 50, 150]);
   },
 
+  noSpace() {
+    if (!muted && soundManager) {
+      try { soundManager.play('noSpace', { volume: 1.0 }); } catch(e) {}
+    }
+    vibrate([60, 50, 100]);
+  },
+
+  highScore() {
+    if (!muted && soundManager) {
+      try { soundManager.play('highScore', { volume: 1.0 }); } catch(e) {}
+    }
+    vibrate([20, 30, 20, 30, 20, 30, 60]);
+  },
+
+  buttonClick() {
+    if (!muted && soundManager) {
+      try { soundManager.play('buttonClick', { volume: 1.0 }); } catch(e) {}
+    }
+  },
+
   newTurn() {
-    play([0.6,,80,.03,.04,.12,3,1.2,,,-150,.04,.04,,,,,.5,.08]);
+    // Disabled as requested
     vibrate(10);
   },
 
   uiClick() {
-    play([1.2,,550,.005,.015,.04,1,1.8,,,,,,,,,,.75,.01]);
+    if (!muted && soundManager) {
+      try { soundManager.play('buttonClick', { volume: 1.0 }); } catch(e) {}
+    }
     vibrate(12);
   },
 
   scorePop() {
-    play([0.8,,700,.005,.03,.08,1,1.5,,,,,,,,,,,.03]);
+    // Disabled as requested
   }
 };

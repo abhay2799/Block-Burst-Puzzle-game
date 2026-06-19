@@ -52,6 +52,15 @@ export class AnimationManager {
       alpha: { start: 1, end: 0 },
       lifespan: 600, emitting: false, quantity: 1
     }).setDepth(17);
+
+    this.hollowEmitter = scene.add.particles(0, 0, 'hollow_square', {
+      speed: { min: 150, max: 500 },
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: { min: 400, max: 900 },
+      gravityY: 200, emitting: false, quantity: 8,
+      rotate: { min: -360, max: 360 }, angle: { min: 0, max: 360 }
+    }).setDepth(16);
   }
 
   emitPlaceParticles(x, y, color) {
@@ -59,7 +68,7 @@ export class AnimationManager {
     this.placeEmitter.emitParticleAt(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 2);
   }
 
-  animateLineClear(clearedCells, lineCount, points, clears, combo, gridRenderer, uiManager) {
+  animateLineClear(clearedCells, lineCount, points, clears, combo, gridRenderer, uiManager, placedCells) {
     const scene = this.scene;
     const cellTotal = CELL_SIZE + GRID_PADDING;
     const totalGridSize = GRID_SIZE * cellTotal - GRID_PADDING;
@@ -159,72 +168,85 @@ export class AnimationManager {
       }
     }
 
-    // White flash on cleared cells
-    const flashSprites = [];
-    for (const cell of clearedCells) {
-      const x = GRID_OFFSET_X + cell.col * cellTotal;
-      const y = GRID_OFFSET_Y + cell.row * cellTotal;
-      const flash = scene.add.image(x, y, 'block_flash').setOrigin(0).setDepth(12).setAlpha(0.9);
-      flashSprites.push(flash);
+    // NEON GLOW BOUNDING BOXES
+    const glowColor = clearedCells.length > 0 ? COLORS[clearedCells[0].colorIndex] : 0xFF3366;
+    
+    if (clears) {
+      for (const r of clears.rows) {
+        const y = GRID_OFFSET_Y + r * cellTotal;
+        const rect = scene.add.graphics().setDepth(18);
+        rect.lineStyle(6, glowColor, 1);
+        rect.strokeRect(GRID_OFFSET_X, y, totalGridSize, CELL_SIZE);
+        rect.setAlpha(0);
+        
+        scene.tweens.add({
+          targets: rect, alpha: 1, scaleX: 1.02, scaleY: 1.05, duration: 150, yoyo: true, hold: 200,
+          onComplete: () => rect.destroy()
+        });
+
+        // Emit hollow squares along the row
+        this.hollowEmitter.setParticleTint(glowColor);
+        for(let c = 0; c < GRID_SIZE; c++) {
+           this.hollowEmitter.emitParticleAt(GRID_OFFSET_X + c * cellTotal + CELL_SIZE/2, y + CELL_SIZE/2, 2);
+        }
+      }
+      for (const c of clears.cols) {
+        const x = GRID_OFFSET_X + c * cellTotal;
+        const rect = scene.add.graphics().setDepth(18);
+        rect.lineStyle(6, glowColor, 1);
+        rect.strokeRect(x, GRID_OFFSET_Y, CELL_SIZE, totalGridSize);
+        rect.setAlpha(0);
+        
+        scene.tweens.add({
+          targets: rect, alpha: 1, scaleX: 1.05, scaleY: 1.02, duration: 150, yoyo: true, hold: 200,
+          onComplete: () => rect.destroy()
+        });
+
+        // Emit hollow squares along the col
+        this.hollowEmitter.setParticleTint(glowColor);
+        for(let r = 0; r < GRID_SIZE; r++) {
+           this.hollowEmitter.emitParticleAt(x + CELL_SIZE/2, GRID_OFFSET_Y + r * cellTotal + CELL_SIZE/2, 2);
+        }
+      }
     }
 
     // Sound
-    if (lineCount > 1) { SoundManager.multiLineClear(lineCount); }
-    else { SoundManager.lineClear(0); }
-    if (combo > 1) {
-      scene.time.delayedCall(80, () => SoundManager.combo(combo));
-    }
+    SoundManager.handleClearSound(lineCount, combo, clears);
 
-    // PHASE 2: Explosions after flash
-    scene.time.delayedCall(TIMING.FLASH_DURATION, () => {
-      for (const f of flashSprites) f.destroy();
-
+    // PHASE 2: Shrink blocks
+    scene.time.delayedCall(100, () => {
       // Ring burst for big clears
       if (lineCount >= 2) {
         const centerX = GRID_OFFSET_X + 4 * cellTotal;
         const centerY = GRID_OFFSET_Y + 4 * cellTotal;
-        this.ringEmitter.setParticleTint(0xffffff);
+        this.ringEmitter.setParticleTint(glowColor);
         this.ringEmitter.emitParticleAt(centerX, centerY, 1);
       }
 
-      // Cell POP with radial burst
       for (const cell of clearedCells) {
-        const x = GRID_OFFSET_X + cell.col * cellTotal;
-        const y = GRID_OFFSET_Y + cell.row * cellTotal;
-        const cx = x + CELL_SIZE / 2;
-        const cy = y + CELL_SIZE / 2;
-        const color = COLORS[cell.colorIndex] || 0xffffff;
-
-        this.clearEmitter.setParticleTint(color);
-        this.clearEmitter.emitParticleAt(cx, cy, 5);
-        this.starEmitter.setParticleTint(0xffffff);
-        this.starEmitter.emitParticleAt(cx, cy, 2);
-        this.debrisEmitter.setParticleTint(color);
-        this.debrisEmitter.emitParticleAt(cx, cy, 3);
-
         const blockSprite = gridRenderer.getBlockSprite(cell.row, cell.col);
         if (blockSprite) {
-          const lineCenterX = GRID_OFFSET_X + totalGridSize / 2;
-          const lineCenterY = GRID_OFFSET_Y + totalGridSize / 2;
-          const dx = (cx - lineCenterX) * 0.3;
-          const dy = (cy - lineCenterY) * 0.3;
-
-          scene.tweens.chain({
+          if (blockSprite.setTintFill) {
+            blockSprite.setTintFill(0xffffff);
+          } else {
+            blockSprite.setTint(0xffffff);
+          }
+          
+          scene.tweens.add({
             targets: blockSprite,
-            tweens: [
-              {
-                scaleX: 1.3, scaleY: 1.3,
-                x: blockSprite.x + dx, y: blockSprite.y + dy,
-                duration: 100, ease: 'Quad.easeOut'
-              },
-              {
+            scaleX: 1.3, scaleY: 1.3,
+            duration: 80,
+            yoyo: true,
+            onComplete: () => {
+              scene.tweens.add({
+                targets: blockSprite,
                 scaleX: 0, scaleY: 0, alpha: 0,
-                angle: Phaser.Math.Between(-30, 30),
-                duration: TIMING.SHRINK_DURATION - 100,
+                angle: Phaser.Math.Between(-90, 90),
+                duration: TIMING.SHRINK_DURATION - 50,
                 ease: 'Back.easeIn',
                 onComplete: () => blockSprite.destroy()
-              }
-            ]
+              });
+            }
           });
           gridRenderer.clearBlockSprite(cell.row, cell.col);
         }
@@ -237,16 +259,15 @@ export class AnimationManager {
 
       // EDGE GLOW
       if (VISUAL_SETTINGS.edgeGlow && clearedCells.length > 0) {
-        const edgeColor = COLORS[clearedCells[0].colorIndex] || 0xffffff;
-        this._flashEdgeGlow(edgeColor);
+        this._flashEdgeGlow(glowColor);
       }
 
-      // Screen shake
-      const intensity = Math.min(lineCount * 3 + combo * 2, 15);
-      scene.cameras.main.shake(TIMING.SHAKE_DURATION, intensity / 1000);
+      // Screen shake (Huge impact for combos)
+      const intensity = Math.min(lineCount * 8 + combo * 5, 40);
+      scene.cameras.main.shake(TIMING.SHAKE_DURATION + 100, intensity / 1000);
 
       uiManager.showScorePopup(points, clearedCells, combo);
-      if (combo > 1) { uiManager.showComboText(combo); }
+      if (combo >= 1) { uiManager.showComboText(combo, placedCells, glowColor); }
       uiManager.updateScoreDisplay(scene.newHighScoreTriggered);
     });
 

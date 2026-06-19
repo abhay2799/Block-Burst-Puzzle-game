@@ -8,7 +8,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "build:android": "vite build && npx cap sync android",
-    "open:android": "npx cap open android"
+    "open:android": "npx cap open android",
+    "download-audio": "node scripts/download_audio.js"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.0.0",

@@ -19,29 +19,28 @@ export class GameOverScene extends Phaser.Scene {
     const W = GAME_WIDTH;
     const H = GAME_HEIGHT;
 
-    // Rich gradient background
+    // Rich vibrant gradient background
     const bg = this.add.graphics();
     if (this.isNewHighScore) {
-      bg.fillGradientStyle(0x1A0A3E, 0x1A0A3E, 0x0A0418, 0x0A0418, 1);
+      bg.fillGradientStyle(0xFF1493, 0xFF1493, 0x8A2BE2, 0x8A2BE2, 1);
     } else {
-      bg.fillGradientStyle(0x0F1B3E, 0x0F1B3E, 0x060D1E, 0x060D1E, 1);
+      bg.fillGradientStyle(0x32ADE6, 0x32ADE6, 0x0072FF, 0x0072FF, 1);
     }
     bg.fillRect(0, 0, W, H);
 
-    // Dark vignette overlay
+    // Light vignette overlay
     this._createVignette(W, H);
-
-    // Shockwave ring expanding from center
-    this._createShockwave(W, H);
 
     // Ambient floating particles
     this._createAmbientParticles(W, H);
 
-    // Delayed card appearance
-    this.time.delayedCall(600, () => {
+    // Delayed card appearance and sound
+    this.time.delayedCall(400, () => {
       if (this.isNewHighScore) {
+        SoundManager.highScore();
         this._buildNewRecordScreen(W, H);
       } else {
+        SoundManager.gameOver();
         this._buildGameOverScreen(W, H);
       }
     });
@@ -49,58 +48,37 @@ export class GameOverScene extends Phaser.Scene {
 
   _createVignette(W, H) {
     const vignette = this.add.graphics().setDepth(1);
-    vignette.fillStyle(0x000000, 0.4);
+    vignette.fillStyle(0x000000, 0.15);
     vignette.fillRect(0, 0, W, 80);
     vignette.fillRect(0, H - 80, W, 80);
     vignette.fillRect(0, 0, 60, H);
     vignette.fillRect(W - 60, 0, 60, H);
-
-    this.tweens.add({
-      targets: vignette, alpha: 0.7,
-      duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
-    });
-  }
-
-  _createShockwave(W, H) {
-    const ring = this.add.graphics().setDepth(2);
-    ring.lineStyle(4, 0xFFFFFF, 0.8);
-    ring.strokeCircle(0, 0, 20);
-    ring.setPosition(W / 2, H * 0.35);
-    ring.setScale(0.5);
-
-    this.tweens.add({
-      targets: ring, scaleX: 12, scaleY: 12, alpha: 0,
-      duration: 800, ease: 'Cubic.easeOut',
-      onComplete: () => ring.destroy()
-    });
   }
 
   _createAmbientParticles(W, H) {
-    const colors = this.isNewHighScore
-      ? [0xFFD700, 0xFFA500, 0xFFEE88, 0xFF6600]
-      : [0x4488FF, 0x6644FF, 0x44CCFF, 0x8866FF];
-
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 20; i++) {
       const x = Phaser.Math.Between(20, W - 20);
       const y = Phaser.Math.Between(50, H - 50);
-      const size = Phaser.Math.Between(2, 5);
-      const color = colors[i % colors.length];
+      const size = Phaser.Math.Between(4, 12);
 
       const dot = this.add.graphics();
-      dot.fillStyle(color, Phaser.Math.FloatBetween(0.2, 0.5));
+      dot.fillStyle(0xFFFFFF, Phaser.Math.FloatBetween(0.1, 0.4));
       dot.fillCircle(0, 0, size);
       dot.setPosition(x, y).setDepth(1);
 
       this.tweens.add({
         targets: dot,
-        y: y - Phaser.Math.Between(30, 100),
+        y: y - Phaser.Math.Between(50, 150),
         alpha: 0,
+        scaleX: 1.5,
+        scaleY: 1.5,
         duration: Phaser.Math.Between(2000, 4000),
         delay: Phaser.Math.Between(0, 2000),
         repeat: -1,
         onRepeat: () => {
           dot.setPosition(Phaser.Math.Between(20, W - 20), Phaser.Math.Between(H * 0.5, H));
-          dot.setAlpha(Phaser.Math.FloatBetween(0.2, 0.5));
+          dot.setAlpha(Phaser.Math.FloatBetween(0.1, 0.4));
+          dot.setScale(1);
         }
       });
     }
@@ -112,12 +90,12 @@ export class GameOverScene extends Phaser.Scene {
 
     // Pulsing crown icon
     const crown = this.add.text(W / 2, H * 0.12, '👑', {
-      fontSize: '64px'
+      fontSize: '72px'
     }).setOrigin(0.5).setScale(0).setDepth(10);
 
     this.tweens.add({
       targets: crown, scaleX: 1, scaleY: 1,
-      duration: 600, ease: 'Back.easeOut',
+      duration: 800, ease: 'Elastic.easeOut',
       onComplete: () => {
         this.tweens.add({
           targets: crown, scaleX: 1.1, scaleY: 1.1,
@@ -127,61 +105,52 @@ export class GameOverScene extends Phaser.Scene {
     });
 
     // "NEW RECORD" title with glow
-    const titleShadow = this.add.text(W / 2, H * 0.21, 'NEW RECORD!', {
-      fontSize: '36px', fontFamily: '"Fredoka", sans-serif',
-      fontStyle: 'bold', color: '#FF8800',
-      stroke: '#FF4400', strokeThickness: 6
+    const titleShadow = this.add.text(W / 2, H * 0.22, 'NEW RECORD!', {
+      fontSize: '42px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+      fontStyle: 'heavy', color: '#FF8800',
+      stroke: '#FF4400', strokeThickness: 10
     }).setOrigin(0.5).setAlpha(0.4).setDepth(9);
 
-    const title = this.add.text(W / 2, H * 0.21, 'NEW RECORD!', {
-      fontSize: '36px', fontFamily: '"Fredoka", sans-serif',
-      fontStyle: 'bold', color: '#FFD700',
-      stroke: '#CC8800', strokeThickness: 4
+    const title = this.add.text(W / 2, H * 0.22, 'NEW RECORD!', {
+      fontSize: '42px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+      fontStyle: 'heavy', color: '#FFF500',
+      stroke: '#CC5500', strokeThickness: 8
     }).setOrigin(0.5).setScale(0).setDepth(10);
 
     this.tweens.add({
       targets: title, scaleX: 1, scaleY: 1,
-      duration: 500, delay: 100, ease: 'Back.easeOut'
+      duration: 800, delay: 100, ease: 'Elastic.easeOut'
     });
 
     this.tweens.add({
       targets: titleShadow,
-      alpha: 0.6, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+      alpha: 0.6, y: H * 0.22 + 4, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
     });
 
     this._buildScoreCard(W, H, 0.32);
     this._buildButtons(W, H, 0.68);
-
-    this.time.delayedCall(300, () => SoundManager.levelComplete());
   }
 
   _buildGameOverScreen(W, H) {
-    // Geometric X icon
-    const iconG = this.add.graphics().setDepth(10);
-    const cx = W / 2, cy = H * 0.12;
-    iconG.fillStyle(0xFF4455, 0.15);
-    iconG.fillCircle(cx, cy, 30);
-    iconG.lineStyle(3, 0xFF4455, 0.6);
-    iconG.strokeCircle(cx, cy, 30);
-    iconG.lineStyle(4, 0xFF6677, 1);
-    iconG.lineBetween(cx - 12, cy - 12, cx + 12, cy + 12);
-    iconG.lineBetween(cx + 12, cy - 12, cx - 12, cy + 12);
-    iconG.setScale(0);
+    // Big chunky sad face or X
+    const icon = this.add.text(W / 2, H * 0.12, '😔', {
+      fontSize: '64px'
+    }).setOrigin(0.5).setScale(0).setDepth(10);
     this.tweens.add({
-      targets: iconG, scaleX: 1, scaleY: 1,
-      duration: 500, ease: 'Back.easeOut'
+      targets: icon, scaleX: 1, scaleY: 1,
+      duration: 800, ease: 'Elastic.easeOut'
     });
 
     // "GAME OVER" title
-    const title = this.add.text(W / 2, H * 0.2, 'GAME OVER', {
-      fontSize: '38px', fontFamily: '"Fredoka", sans-serif',
-      fontStyle: 'bold', color: '#FFFFFF',
-      stroke: '#333366', strokeThickness: 4
+    const title = this.add.text(W / 2, H * 0.22, 'GAME OVER', {
+      fontSize: '42px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+      fontStyle: 'heavy', color: '#FFFFFF',
+      stroke: '#0055AA', strokeThickness: 8
     }).setOrigin(0.5).setScale(0).setDepth(10);
 
     this.tweens.add({
       targets: title, scaleX: 1, scaleY: 1,
-      duration: 500, delay: 200, ease: 'Back.easeOut'
+      duration: 800, delay: 150, ease: 'Elastic.easeOut'
     });
 
     this._buildScoreCard(W, H, 0.3);
@@ -217,52 +186,62 @@ export class GameOverScene extends Phaser.Scene {
     const cardY = H * startY + H * 0.1;
 
     // Card slides up from below
-    const cardContainer = this.add.container(0, 100).setDepth(5).setAlpha(0);
+    const cardContainer = this.add.container(0, 150).setDepth(5).setAlpha(0);
 
-    // Glassmorphism card
+    // Drop shadow
+    const cardShadow = this.add.graphics();
+    cardShadow.fillStyle(0x000000, 0.3);
+    cardShadow.fillRoundedRect(cardX - 6, cardY + 12, cardW + 12, cardH, 32);
+    cardContainer.add(cardShadow);
+
+    // Toy-box thick border (outer rim)
+    const cardBorder = this.add.graphics();
+    cardBorder.fillStyle(this.isNewHighScore ? 0xFFB300 : 0x33BBFF, 1); 
+    cardBorder.fillRoundedRect(cardX - 8, cardY - 8, cardW + 16, cardH + 20, 32);
+    cardContainer.add(cardBorder);
+
+    // Main card interior (bright white)
     const cardBg = this.add.graphics();
-    cardBg.fillStyle(0x1a2255, 0.7);
-    cardBg.fillRoundedRect(cardX, cardY, cardW, cardH, 20);
-    cardBg.lineStyle(1.5, 0x4466AA, 0.5);
-    cardBg.strokeRoundedRect(cardX, cardY, cardW, cardH, 20);
+    cardBg.fillStyle(0xFFFFFF, 1);
+    cardBg.fillRoundedRect(cardX, cardY, cardW, cardH, 24);
     cardContainer.add(cardBg);
 
-    // Inner glow
-    const glowLine = this.add.graphics();
-    glowLine.fillStyle(0x5588FF, 0.2);
-    glowLine.fillRoundedRect(cardX + 10, cardY + 5, cardW - 20, 3, 2);
-    cardContainer.add(glowLine);
+    // Inner bright glow/rim
+    const innerRim = this.add.graphics();
+    innerRim.lineStyle(6, this.isNewHighScore ? 0xFFE566 : 0xAAEEFF, 0.8);
+    innerRim.strokeRoundedRect(cardX + 6, cardY + 6, cardW - 12, cardH - 12, 18);
+    cardContainer.add(innerRim);
 
     // "SCORE" label
     const scoreLabel = this.add.text(W / 2, cardY + 30, 'SCORE', {
-      fontSize: '12px', fontFamily: '"Fredoka", sans-serif', fontStyle: 'bold', color: '#7799CC'
+      fontSize: '14px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', fontStyle: 'bold', color: '#888888'
     }).setOrigin(0.5);
     cardContainer.add(scoreLabel);
 
     // Score number (animated)
     const scoreNum = this.add.text(W / 2, cardY + 75, '0', {
-      fontSize: '52px', fontFamily: '"Fredoka", sans-serif',
-      fontStyle: 'bold', color: '#FFFFFF'
+      fontSize: '64px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+      fontStyle: 'heavy', color: '#333333'
     }).setOrigin(0.5);
     cardContainer.add(scoreNum);
 
     // Divider
     const divider = this.add.graphics();
-    divider.fillStyle(0x4466AA, 0.3);
-    divider.fillRect(cardX + 40, cardY + 115, cardW - 80, 1);
+    divider.fillStyle(0xEEEEEE, 1);
+    divider.fillRect(cardX + 40, cardY + 115, cardW - 80, 4);
     cardContainer.add(divider);
 
     // "BEST SCORE" label
-    const bestLabel = this.add.text(W / 2, cardY + 135, 'BEST SCORE', {
-      fontSize: '11px', fontFamily: '"Fredoka", sans-serif', fontStyle: 'bold', color: '#CCAA44'
+    const bestLabel = this.add.text(W / 2, cardY + 140, 'BEST SCORE', {
+      fontSize: '14px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', fontStyle: 'bold', color: '#AAAAAA'
     }).setOrigin(0.5);
     cardContainer.add(bestLabel);
 
     // Best score value
     const bestDisplay = this.isNewHighScore ? this.finalScore : this.highScore;
-    const bestColor = this.isNewHighScore ? '#FFD700' : '#FFCC55';
-    const bestNum = this.add.text(W / 2, cardY + 168, bestDisplay.toLocaleString(), {
-      fontSize: '32px', fontFamily: '"Fredoka", sans-serif',
+    const bestColor = this.isNewHighScore ? '#FFB300' : '#FF2D55';
+    const bestNum = this.add.text(W / 2, cardY + 175, bestDisplay.toLocaleString(), {
+      fontSize: '36px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: bestColor
     }).setOrigin(0.5);
     cardContainer.add(bestNum);
@@ -272,26 +251,26 @@ export class GameOverScene extends Phaser.Scene {
       const pct = Math.min(this.finalScore / this.highScore, 1);
       const barW = cardW - 60;
       const barX = cardX + 30;
-      const barY = cardY + 200;
+      const barY = cardY + 205;
 
       const barBg = this.add.graphics();
-      barBg.fillStyle(0x222255, 1);
-      barBg.fillRoundedRect(barX, barY, barW, 10, 5);
+      barBg.fillStyle(0xEEEEEE, 1);
+      barBg.fillRoundedRect(barX, barY, barW, 14, 7);
       cardContainer.add(barBg);
 
       const barFill = this.add.graphics();
-      const fillColor = pct > 0.8 ? 0x44DD66 : pct > 0.5 ? 0xFFCC00 : 0x4488FF;
+      const fillColor = pct > 0.8 ? 0x4CD964 : pct > 0.5 ? 0xFF9500 : 0x32ADE6;
       barFill.fillStyle(fillColor, 1);
-      barFill.fillRoundedRect(barX, barY, barW * pct, 10, 5);
+      barFill.fillRoundedRect(barX, barY, barW * pct, 14, 7);
       cardContainer.add(barFill);
 
-      const pctText = this.add.text(W / 2, barY + 20, `${Math.round(pct * 100)}% of best`, {
-        fontSize: '10px', fontFamily: '"Fredoka", sans-serif', color: '#8899BB'
+      const pctText = this.add.text(W / 2, barY + 22, `${Math.round(pct * 100)}% of best`, {
+        fontSize: '12px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', fontStyle: 'bold', color: '#999999'
       }).setOrigin(0.5);
       cardContainer.add(pctText);
     } else if (this.isNewHighScore) {
-      const pbText = this.add.text(W / 2, cardY + 208, '⭐ Personal Best!', {
-        fontSize: '13px', fontFamily: '"Fredoka", sans-serif', fontStyle: 'bold', color: '#FFD700'
+      const pbText = this.add.text(W / 2, cardY + 215, '⭐ Personal Best!', {
+        fontSize: '18px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', fontStyle: 'bold', color: '#FF9500'
       }).setOrigin(0.5);
       cardContainer.add(pbText);
     }
@@ -300,7 +279,7 @@ export class GameOverScene extends Phaser.Scene {
     this.tweens.add({
       targets: cardContainer,
       y: 0, alpha: 1,
-      duration: 600, ease: 'Back.easeOut',
+      duration: 800, ease: 'Elastic.easeOut',
       onComplete: () => {
         // Animate score counter with camera shake on milestones
         this._animateScoreCounter(scoreNum);
@@ -333,21 +312,21 @@ export class GameOverScene extends Phaser.Scene {
   _buildButtons(W, H, startY) {
     const btnY = H * startY + H * 0.12;
 
-    const { container: playBtn } = ButtonFactory.create(this, W / 2, btnY, 220, 54, 'PLAY AGAIN', '▶', 'primary', () => {
+    const { container: playBtn } = ButtonFactory.create(this, W / 2, btnY, 220, 60, 'PLAY AGAIN', '▶', 'primary', () => {
       this.cameras.main.fade(300, 0, 0, 0, false, (cam, progress) => {
         if (progress >= 1) this.scene.start('GameScene');
       });
     });
     playBtn.setScale(0);
-    this.tweens.add({ targets: playBtn, scaleX: 1, scaleY: 1, duration: 400, delay: 200, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: playBtn, scaleX: 1, scaleY: 1, duration: 800, delay: 200, ease: 'Elastic.easeOut' });
 
-    const { container: homeBtn } = ButtonFactory.create(this, W / 2, btnY + 70, 220, 54, 'HOME', '🏠', 'secondary', () => {
+    const { container: homeBtn } = ButtonFactory.create(this, W / 2, btnY + 80, 220, 60, 'HOME', '🏠', 'secondary', () => {
       this.cameras.main.fade(300, 0, 0, 0, false, (cam, progress) => {
         if (progress >= 1) this.scene.start('MenuScene');
       });
     });
     homeBtn.setScale(0);
-    this.tweens.add({ targets: homeBtn, scaleX: 1, scaleY: 1, duration: 400, delay: 350, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: homeBtn, scaleX: 1, scaleY: 1, duration: 800, delay: 350, ease: 'Elastic.easeOut' });
   }
 
   shutdown() {

@@ -16,39 +16,85 @@ export class PauseScene extends Phaser.Scene {
 
   create() {
     const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.7);
+    bg.fillStyle(0x000000, 0.75);
     bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT), Phaser.Geom.Rectangle.Contains);
 
-    const cardW = 320, cardH = 290;
+    const cardW = 340, cardH = 340;
     const cardX = (GAME_WIDTH - cardW) / 2;
     const cardY = (GAME_HEIGHT - cardH) / 2;
 
-    const cardOuter = this.add.graphics();
-    cardOuter.fillStyle(0x5B7CC4, 1);
-    cardOuter.fillRoundedRect(cardX - 4, cardY - 4, cardW + 8, cardH + 8, 20);
+    const cardContainer = this.add.container(0, -100).setAlpha(0).setDepth(5);
 
-    const card = this.add.graphics();
-    card.fillStyle(0x3B5BA8, 1);
-    card.fillRoundedRect(cardX, cardY, cardW, cardH, 18);
+    // Drop shadow
+    const cardShadow = this.add.graphics();
+    cardShadow.fillStyle(0x000000, 0.3);
+    cardShadow.fillRoundedRect(cardX - 6, cardY + 12, cardW + 12, cardH, 32);
+    cardContainer.add(cardShadow);
 
-    this.add.text(GAME_WIDTH / 2, cardY + 34, 'Settings', {
-      fontSize: '24px', fontFamily: '"Fredoka", sans-serif',
-      fontStyle: 'bold', color: '#ffffff',
-      shadow: { offsetX: 0, offsetY: 1, color: '#000000', blur: 2, fill: true }
+    // Toy-box thick border (outer rim)
+    const cardBorder = this.add.graphics();
+    cardBorder.fillStyle(0x33BBFF, 1); // Bright Cyan
+    cardBorder.fillRoundedRect(cardX - 8, cardY - 8, cardW + 16, cardH + 20, 32);
+    cardContainer.add(cardBorder);
+
+    // Main card interior (bright white)
+    const cardBg = this.add.graphics();
+    cardBg.fillStyle(0xFFFFFF, 1);
+    cardBg.fillRoundedRect(cardX, cardY, cardW, cardH, 24);
+    cardContainer.add(cardBg);
+
+    // Inner bright glow/rim
+    const innerRim = this.add.graphics();
+    innerRim.lineStyle(6, 0xAAEEFF, 0.8);
+    innerRim.strokeRoundedRect(cardX + 6, cardY + 6, cardW - 12, cardH - 12, 18);
+    cardContainer.add(innerRim);
+
+    const title = this.add.text(GAME_WIDTH / 2, cardY + 40, 'PAUSED', {
+      fontSize: '40px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+      fontStyle: '800', color: '#FF44AA',
+      stroke: '#AA1155', strokeThickness: 8,
+      shadow: { offsetX: 0, offsetY: 4, color: '#AA1155', blur: 0, fill: true }
     }).setOrigin(0.5);
+    cardContainer.add(title);
 
-    const closeBtn = this.add.text(cardX + cardW - 20, cardY + 14, '✕', {
-      fontSize: '24px', fontFamily: '"Fredoka", sans-serif', fontStyle: 'bold', color: '#ffffff'
-    }).setOrigin(0.5, 0).setInteractive({ useHandCursor: true });
+    const divider = this.add.graphics();
+    divider.fillStyle(0xEEEEEE, 1);
+    divider.fillRect(cardX + 50, cardY + 75, cardW - 100, 6);
+    cardContainer.add(divider);
+
+    // Close Button (Toy style X)
+    const closeBtnBg = this.add.graphics();
+    closeBtnBg.fillStyle(0xFF5533, 1);
+    closeBtnBg.fillCircle(cardX + cardW - 10, cardY + 10, 20);
+    closeBtnBg.lineStyle(4, 0xFFFFFF, 1);
+    closeBtnBg.strokeCircle(cardX + cardW - 10, cardY + 10, 20);
+    cardContainer.add(closeBtnBg);
+
+    const closeBtn = this.add.text(cardX + cardW - 10, cardY + 10, '✕', {
+      fontSize: '24px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', fontStyle: 'bold', color: '#FFFFFF'
+    }).setOrigin(0.5, 0.5).setInteractive({ useHandCursor: true });
+    
     closeBtn.on('pointerdown', () => { SoundManager.uiClick(); this.resumeGame(); });
+    cardContainer.add(closeBtn);
 
-    const btnStartY = cardY + 90;
-    const btnSpacing = 64;
+    const btnStartY = cardY + 130;
+    const btnSpacing = 80;
 
-    ButtonFactory.create(this, GAME_WIDTH / 2, btnStartY, 250, 48, 'Home', '🏠', 'primary', () => this.goToMenu());
-    ButtonFactory.create(this, GAME_WIDTH / 2, btnStartY + btnSpacing, 250, 48, 'Replay', '🔄', 'accent', () => this.restartGame());
-    ButtonFactory.create(this, GAME_WIDTH / 2, btnStartY + btnSpacing * 2, 250, 48, 'Resume', '▶', 'secondary', () => this.resumeGame());
+    const { container: btn1 } = ButtonFactory.create(this, GAME_WIDTH / 2, btnStartY, 260, 64, 'Resume', '▶', 'secondary', () => this.resumeGame());
+    const { container: btn2 } = ButtonFactory.create(this, GAME_WIDTH / 2, btnStartY + btnSpacing, 260, 64, 'Replay', '🔄', 'accent', () => this.restartGame());
+    const { container: btn3 } = ButtonFactory.create(this, GAME_WIDTH / 2, btnStartY + btnSpacing * 2, 260, 64, 'Home', '🏠', 'danger', () => this.goToMenu());
+    
+    cardContainer.add(btn1);
+    cardContainer.add(btn2);
+    cardContainer.add(btn3);
+
+    // Bouncy entry animation
+    this.tweens.add({
+      targets: cardContainer,
+      y: 0, alpha: 1,
+      duration: 800, ease: 'Elastic.easeOut'
+    });
   }
 
   resumeGame() {

@@ -1,14 +1,14 @@
 import { PIECE_SHAPES, parsePieceShape } from './Pieces.js';
 import { COLORS, GRID_SIZE } from '../utils/Constants.js';
 
-const TIER_EASY_END = 8;
-const TIER_MEDIUM_END = 21;
+const TIER_EASY_END = 9;
+const TIER_MEDIUM_END = 22;
 
 const TIER_WEIGHTS = {
   beginner:     { easy: 0.50, medium: 0.40, hard: 0.10 },
   intermediate: { easy: 0.30, medium: 0.50, hard: 0.20 },
   advanced:     { easy: 0.10, medium: 0.45, hard: 0.45 },
-  expert:       { easy: 0.05, medium: 0.30, hard: 0.65 },
+  expert:       { easy: 0.10, medium: 0.35, hard: 0.55 },
 };
 
 const COMPLEMENTARY_THRESHOLDS = {
@@ -23,8 +23,15 @@ export class DifficultyManager {
     this.lastTurnHadHard = false;
   }
 
-  generateSmartTurn(board, score, turnsPlayed) {
-    const tier = this._getTier(score);
+  generateSmartTurn(board, score, turnsPlayed, currentLevel = 1) {
+    let tier = this._getTier(score);
+    
+    // Every 3rd level is inherently TOUGH (expert tier overrides)
+    const isBossLevel = currentLevel % 3 === 0;
+    if (isBossLevel) {
+      tier = 'expert';
+    }
+
     const analysis = this.analyzeBoard(board);
     const weights = this._getAdjustedWeights(tier, analysis);
 
@@ -34,7 +41,7 @@ export class DifficultyManager {
     let hasComplementary = false;
 
     const complementaryThreshold = COMPLEMENTARY_THRESHOLDS[tier];
-    const needsComplementary = complementaryThreshold != null;
+    const needsComplementary = complementaryThreshold != null && turnsPlayed > 0 && turnsPlayed % complementaryThreshold === 0;
 
     for (let i = 0; i < 3; i++) {
       if (i === 0 && needsComplementary) {
@@ -237,7 +244,7 @@ export class DifficultyManager {
             if (gapPositions.has(`${r + cell.row},${c + cell.col}`)) overlap++;
           }
 
-          if (overlap >= 2 && overlap > bestOverlap) {
+          if (overlap >= Math.min(2, target.gaps.length) && overlap > bestOverlap) {
             bestOverlap = overlap;
             bestMatch = shapeIdx;
           }

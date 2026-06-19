@@ -102,11 +102,11 @@ export function parsePieceShape(shapeStr) {
 export function generatePiece(hardPieceChance = 0) {
   let shapeIndex;
 
-  // Hard pieces are indices 21+ (pentominoes, 3x3, large L-shapes)
+  // Hard pieces are indices 22+ (pentominoes, 3x3, large L-shapes)
   // Easy pieces are indices 0-8 (small shapes)
   if (Math.random() < hardPieceChance) {
     // Pick from hard shapes (larger, awkward)
-    shapeIndex = 21 + Math.floor(Math.random() * (PIECE_SHAPES.length - 21));
+    shapeIndex = 22 + Math.floor(Math.random() * (PIECE_SHAPES.length - 22));
   } else {
     // Pick from any shape
     shapeIndex = Math.floor(Math.random() * PIECE_SHAPES.length);

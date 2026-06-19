@@ -349,16 +349,16 @@ export const AdManager = {
     box.fillRoundedRect(boxX, boxY, boxW, boxH, 16);
 
     const adText = scene.add.text(width / 2, height / 2 - 20, 'Ad Placeholder', {
-      fontSize: '24px', fontFamily: '"Fredoka", sans-serif', color: '#ffffff'
+      fontSize: '24px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', color: '#ffffff'
     }).setOrigin(0.5).setDepth(202);
 
     const subText = scene.add.text(width / 2, height / 2 + 15, 'Real ads appear on device', {
-      fontSize: '14px', fontFamily: '"Fredoka", sans-serif', color: '#aaaaaa'
+      fontSize: '14px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', color: '#aaaaaa'
     }).setOrigin(0.5).setDepth(202);
 
     let remaining = 3;
     const timerText = scene.add.text(width / 2, boxY + boxH - 40, `Skip in ${remaining}...`, {
-      fontSize: '16px', fontFamily: '"Fredoka", sans-serif', color: '#FFD32A'
+      fontSize: '16px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', color: '#FFD32A'
     }).setOrigin(0.5).setDepth(202);
 
     const countdown = scene.time.addEvent({
@@ -371,7 +371,7 @@ export const AdManager = {
 
     scene.time.delayedCall(3000, () => {
       const skipBtn = scene.add.text(width / 2, boxY + boxH - 40, 'CONTINUE', {
-        fontSize: '20px', fontFamily: '"Fredoka", sans-serif', color: '#4ECDC4'
+        fontSize: '20px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', color: '#4ECDC4'
       }).setOrigin(0.5).setDepth(203).setInteractive({ useHandCursor: true });
 
       timerText.setVisible(false);

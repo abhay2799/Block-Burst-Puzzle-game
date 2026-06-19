@@ -9,6 +9,7 @@ import { AnimationManager } from '../managers/AnimationManager.js';
 import { InputHandler } from '../managers/InputHandler.js';
 import { VisualProgressionManager } from '../managers/VisualProgressionManager.js';
 import { AdManager } from '../ads/AdManager.js';
+import { ButtonFactory } from '../ui/ButtonFactory.js';
 import {
   GRID_SIZE, CELL_SIZE, GRID_PADDING, GRID_OFFSET_X, GRID_OFFSET_Y,
   PIECE_SCALE_SMALL, PIECE_AREA_Y, TIMING, GAME_WIDTH, GAME_HEIGHT,
@@ -58,6 +59,8 @@ export class GameScene extends Phaser.Scene {
     this._checkSavedGame();
 
     this.input.enabled = true;
+    SoundManager.init(this);
+    SoundManager.playBGM();
 
     AdManager.resetAdCounters();
     AdManager.initialize().then(() => { AdManager.showBanner(); });
@@ -72,8 +75,7 @@ export class GameScene extends Phaser.Scene {
         return;
       }
     } catch (e) { /* ignore */ }
-    this.spawnNewPieces();
-    this.showTutorialIfFirstTime();
+    this.playStartAnimation();
   }
 
   _showContinuePrompt(state) {
@@ -117,7 +119,7 @@ export class GameScene extends Phaser.Scene {
     cardContainer.add(icon);
 
     const titleText = this.add.text(0, -cardH / 2 + 100, 'Saved Game Found', {
-      fontSize: '22px', fontFamily: '"Fredoka", sans-serif',
+      fontSize: '22px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: '#ffffff',
       shadow: { offsetX: 0, offsetY: 1, color: '#000000', blur: 2, fill: true }
     }).setOrigin(0.5);
@@ -129,106 +131,96 @@ export class GameScene extends Phaser.Scene {
     cardContainer.add(scoreBg);
 
     const scoreText = this.add.text(0, -cardH / 2 + 138, `⭐  ${(state.score ?? 0).toLocaleString()}  points`, {
-      fontSize: '15px', fontFamily: '"Fredoka", sans-serif',
+      fontSize: '15px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: '#FFD93D'
     }).setOrigin(0.5);
     cardContainer.add(scoreText);
 
-    const btnW = 240, btnH = 52;
-    const continueBtnY = 10;
+    const btnStartY = 16;
+    const btnSpacing = 64;
 
-    const contShadow = this.add.graphics();
-    contShadow.fillStyle(0x000000, 0.2);
-    contShadow.fillRoundedRect(-btnW / 2 + 2, continueBtnY - btnH / 2 + 4, btnW, btnH, btnH / 2);
-    cardContainer.add(contShadow);
+    const cleanup = () => {
+      this.tweens.add({
+        targets: cardContainer, alpha: 0, y: cy - 50, duration: 200, ease: 'Quad.easeIn',
+        onComplete: () => { cardContainer.destroy(true); }
+      });
+      this.tweens.add({
+        targets: overlay, alpha: 0, duration: 200,
+        onComplete: () => { overlay.destroy(); }
+      });
+    };
 
-    const contBody = this.add.graphics();
-    contBody.fillStyle(0x28A745, 1);
-    contBody.fillRoundedRect(-btnW / 2, continueBtnY - btnH / 2, btnW, btnH, btnH / 2);
-    cardContainer.add(contBody);
+    const contBtn = ButtonFactory.create(this, 0, btnStartY, 240, 56, 'CONTINUE', '▶', 'primary', () => {
+      this.tweens.add({
+        targets: cardContainer, scaleX: 0.96, scaleY: 0.96,
+        duration: 60, yoyo: true,
+        onComplete: () => {
+          cleanup();
+          this.time.delayedCall(220, () => this._restoreState(state));
+        }
+      });
+    });
+    cardContainer.add(contBtn.container);
 
-    const contGloss = this.add.graphics();
-    contGloss.fillStyle(0x34D058, 0.4);
-    contGloss.fillRoundedRect(-btnW / 2 + 4, continueBtnY - btnH / 2 + 2, btnW - 8, btnH * 0.38, { tl: btnH / 2, tr: btnH / 2, bl: 4, br: 4 });
-    cardContainer.add(contGloss);
-
-    const contText = this.add.text(0, continueBtnY, '▶  CONTINUE', {
-      fontSize: '18px', fontFamily: '"Fredoka", sans-serif',
-      fontStyle: 'bold', color: '#ffffff',
-      shadow: { offsetX: 0, offsetY: 1, color: '#000000', blur: 0, fill: true }
-    }).setOrigin(0.5);
-    cardContainer.add(contText);
-
-    const newBtnY = 74;
-
-    const newShadow = this.add.graphics();
-    newShadow.fillStyle(0x000000, 0.2);
-    newShadow.fillRoundedRect(-btnW / 2 + 2, newBtnY - btnH / 2 + 4, btnW, btnH, btnH / 2);
-    cardContainer.add(newShadow);
-
-    const newBody = this.add.graphics();
-    newBody.fillStyle(0x2979FF, 1);
-    newBody.fillRoundedRect(-btnW / 2, newBtnY - btnH / 2, btnW, btnH, btnH / 2);
-    cardContainer.add(newBody);
-
-    const newGloss = this.add.graphics();
-    newGloss.fillStyle(0x4D96FF, 0.4);
-    newGloss.fillRoundedRect(-btnW / 2 + 4, newBtnY - btnH / 2 + 2, btnW - 8, btnH * 0.38, { tl: btnH / 2, tr: btnH / 2, bl: 4, br: 4 });
-    cardContainer.add(newGloss);
-
-    const newText = this.add.text(0, newBtnY, '✦  NEW GAME', {
-      fontSize: '18px', fontFamily: '"Fredoka", sans-serif',
-      fontStyle: 'bold', color: '#ffffff',
-      shadow: { offsetX: 0, offsetY: 1, color: '#000000', blur: 0, fill: true }
-    }).setOrigin(0.5);
-    cardContainer.add(newText);
+    const newBtn = ButtonFactory.create(this, 0, btnStartY + btnSpacing, 240, 56, 'NEW GAME', '✦', 'secondary', () => {
+      this.tweens.add({
+        targets: cardContainer, scaleX: 0.96, scaleY: 0.96,
+        duration: 60, yoyo: true,
+        onComplete: () => {
+          cleanup();
+          this.time.delayedCall(220, () => {
+            try { localStorage.removeItem('blockblast_saved_game'); } catch (e) {}
+            this.playStartAnimation();
+          });
+        }
+      });
+    });
+    cardContainer.add(newBtn.container);
 
     this.tweens.add({
       targets: cardContainer,
-      y: cy, alpha: 1,
-      duration: 400, ease: 'Back.easeOut', delay: 100,
-      onComplete: () => {
-        const contZone = this.add.zone(cx, cy + continueBtnY, btnW, btnH).setDepth(203).setInteractive({ useHandCursor: true });
-        const newZone = this.add.zone(cx, cy + newBtnY, btnW, btnH).setDepth(203).setInteractive({ useHandCursor: true });
+      y: cy - 20, alpha: 1,
+      duration: 400, ease: 'Back.easeOut', delay: 100
+    });
+  }
 
-        const cleanup = () => {
-          this.tweens.add({
-            targets: cardContainer, alpha: 0, y: cy - 30, duration: 200, ease: 'Quad.easeIn',
-            onComplete: () => { cardContainer.destroy(true); }
-          });
-          this.tweens.add({
-            targets: overlay, alpha: 0, duration: 200,
-            onComplete: () => { overlay.destroy(); }
-          });
-          contZone.destroy();
-          newZone.destroy();
-        };
+  playStartAnimation() {
+    this.input.enabled = false;
+    SoundManager.playGameStart();
 
-        contZone.on('pointerdown', () => {
-          SoundManager.uiClick();
-          this.tweens.add({
-            targets: cardContainer, scaleX: 0.96, scaleY: 0.96,
-            duration: 60, yoyo: true,
-            onComplete: () => { cleanup(); this.time.delayedCall(220, () => this._restoreState(state)); }
-          });
-        });
+    const duration = 2000;
+    const blocks = [];
 
-        newZone.on('pointerdown', () => {
-          SoundManager.uiClick();
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        const delay = Math.random() * (duration - 400);
+        this.time.delayedCall(delay, () => {
+          const colorIndex = Math.floor(Math.random() * 5) + 1;
+          const x = GRID_OFFSET_X + c * (CELL_SIZE + GRID_PADDING);
+          const y = GRID_OFFSET_Y + r * (CELL_SIZE + GRID_PADDING);
+          const sprite = this.add.image(x, y, `block_${colorIndex}`).setOrigin(0).setDepth(2).setScale(0);
+          
           this.tweens.add({
-            targets: cardContainer, scaleX: 0.96, scaleY: 0.96,
-            duration: 60, yoyo: true,
-            onComplete: () => {
-              cleanup();
-              this.time.delayedCall(220, () => {
-                try { localStorage.removeItem('blockblast_saved_game'); } catch (e) {}
-                this.spawnNewPieces();
-                this.showTutorialIfFirstTime();
-              });
-            }
+            targets: sprite, scaleX: 1, scaleY: 1, duration: 200, ease: 'Back.easeOut'
           });
+          blocks.push(sprite);
         });
       }
+    }
+
+    this.time.delayedCall(duration, () => {
+      blocks.forEach(sprite => {
+        this.tweens.add({
+          targets: sprite, scaleX: 0, scaleY: 0, duration: 300, ease: 'Back.easeIn',
+          onComplete: () => sprite.destroy()
+        });
+      });
+
+      this.time.delayedCall(300, () => {
+        this.input.enabled = true;
+        this.spawnNewPieces();
+        this.showTutorialIfFirstTime();
+      });
     });
   }
 
@@ -298,9 +290,16 @@ export class GameScene extends Phaser.Scene {
     const trayH = 130;
     const trayX = 20;
     const trayY = PIECE_AREA_Y - 65;
-    tray.fillStyle(0x0F1838, 0.5);
+    // Outer shadow
+    tray.fillStyle(0x000000, 0.4);
+    tray.fillRoundedRect(trayX, trayY + 4, trayW, trayH, 16);
+
+    // Glass base
+    tray.fillStyle(0xffffff, 0.08);
     tray.fillRoundedRect(trayX, trayY, trayW, trayH, 16);
-    tray.lineStyle(1, 0x3355AA, 0.2);
+    
+    // Glass highlight stroke
+    tray.lineStyle(1.5, 0xffffff, 0.2);
     tray.strokeRoundedRect(trayX, trayY, trayW, trayH, 16);
   }
 
@@ -346,7 +345,7 @@ export class GameScene extends Phaser.Scene {
         bg.fillRoundedRect(-160, -24, 320, 48, 24);
         container.add(bg);
         const label = this.add.text(0, 0, `${icon}  ${text}`, {
-          fontSize: '15px', fontFamily: '"Fredoka", sans-serif', fontStyle: 'bold', color: '#ffffff', align: 'center'
+          fontSize: '15px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', fontStyle: 'bold', color: '#ffffff', align: 'center'
         }).setOrigin(0.5);
         container.add(label);
         this.tweens.add({ targets: container, alpha: 1, duration: 300, ease: 'Power2' });
@@ -367,7 +366,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.currentPieces = this.difficultyManager.generateSmartTurn(
-      this.board, this.scoreManager.getScore(), this.turnsPlayed
+      this.board, this.scoreManager.getScore(), this.turnsPlayed, this.scoreManager.getLevel()
     );
     const spacing = GAME_WIDTH / 3;
 
@@ -400,10 +399,18 @@ export class GameScene extends Phaser.Scene {
     container.originalX = x;
     container.originalY = y;
 
+    const glow = this.add.image(0, 0, 'particle').setScale(4).setAlpha(0).setBlendMode(Phaser.BlendModes.ADD);
+    container.addAt(glow, 0);
+
     container.setScale(0);
     this.tweens.add({
       targets: container, scaleX: 1, scaleY: 1,
       duration: 450, ease: 'Back.easeOut', delay: index * 100,
+      onStart: () => {
+        this.tweens.add({
+          targets: glow, alpha: 0.5, scale: 7, duration: 250, yoyo: true, onComplete: () => glow.destroy()
+        });
+      },
       onComplete: () => {
         container._breathTween = this.tweens.add({
           targets: container,
@@ -484,8 +491,19 @@ export class GameScene extends Phaser.Scene {
       const points = this.scoreManager.addLineClearPoints(totalLines);
       const combo = this.scoreManager.getCombo();
       const delay = this.animManager.animateLineClear(
-        clearedCells, totalLines, points, clears, combo, this.gridRenderer, this.uiManager
+        clearedCells, totalLines, points, clears, combo, this.gridRenderer, this.uiManager, placedCells
       );
+      
+      this.scoreManager.addLinesCleared(totalLines);
+      if (this.scoreManager.linesClearedThisLevel >= 5) {
+        const newLevel = this.scoreManager.advanceLevel();
+        if (newLevel > 1 && (newLevel - 1) % 3 === 0) {
+          this.uiManager.showWinningStreak();
+        } else {
+          this.uiManager.showMotivation(`Round ${newLevel}!`);
+        }
+      }
+
       this.time.delayedCall(delay, () => this.finishTurn());
     } else {
       this.lastPlacedCleared = false;
@@ -534,7 +552,7 @@ export class GameScene extends Phaser.Scene {
   gameOver() {
     this.isAnimating = true;
     this.scoreManager.saveHighScore();
-    SoundManager.gameOver();
+    SoundManager.noSpace();
 
     try { localStorage.removeItem('blockblast_saved_game'); } catch (e) {}
 
@@ -543,7 +561,7 @@ export class GameScene extends Phaser.Scene {
     toastBg.fillStyle(0x1a1a3e, 0.85);
     toastBg.fillRoundedRect(GAME_WIDTH / 2 - 120, toastY - 18, 240, 36, 18);
     const toastText = this.add.text(GAME_WIDTH / 2, toastY, 'No Space Left', {
-      fontSize: '15px', fontFamily: '"Fredoka", sans-serif',
+      fontSize: '15px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: '#ffffff'
     }).setOrigin(0.5).setDepth(101);
 

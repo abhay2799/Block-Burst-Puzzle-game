@@ -6,6 +6,24 @@ export class BootScene extends Phaser.Scene {
     super({ key: 'BootScene' });
   }
 
+  preload() {
+    // Background music
+    this.load.audio('bgm', 'assets/audio/bgm.mp3');
+    
+    // Sound Effects
+    this.load.audio('horizontalClear', 'assets/audio/horizontalClear.mp3');
+    this.load.audio('combo1', 'assets/audio/combo1.mp3');
+    this.load.audio('combo2', 'assets/audio/combo2.mp3');
+    this.load.audio('smallBreak', 'assets/audio/smallBreak.mp3');
+    this.load.audio('pieceInvalid', 'assets/audio/pieceInvalid.mp3');
+    this.load.audio('gameStart', 'assets/audio/gameStart.mp3');
+    this.load.audio('dragSound', 'assets/audio/drag-sound.mp3');
+    this.load.audio('gameOver', 'assets/audio/gameOver.mp3');
+    this.load.audio('noSpace', 'assets/audio/noSpace.mp3');
+    this.load.audio('highScore', 'assets/audio/highScore.mp3');
+    this.load.audio('buttonClick', 'assets/audio/buttonClick.mp3');
+  }
+
   create() {
     this.generateBlockTextures();
     this.generateParticleTextures();
@@ -14,48 +32,42 @@ export class BootScene extends Phaser.Scene {
 
   generateBlockTextures() {
     const size = CELL_SIZE;
-    const r = 10; // Slightly rounder for 3D look
+    const r = 8; // Block blast uses slightly rounded squares
 
     COLORS.forEach((color, index) => {
       const gfx = this.add.graphics();
       const baseColor = Phaser.Display.Color.IntegerToColor(color);
 
-      // 1. Deep Drop Shadow (offset right/bottom)
-      gfx.fillStyle(0x000000, 0.4);
-      gfx.fillRoundedRect(2, 4, size - 2, size - 2, r);
-
-      // 2. Base Dark Layer (adds bottom depth)
-      const darkColor = baseColor.clone().darken(40);
+      // 1. Full dark background (creates the bottom and right dark bevels)
+      const darkColor = baseColor.clone().darken(35);
       gfx.fillStyle(darkColor.color, 1);
-      gfx.fillRoundedRect(0, 2, size - 2, size - 2, r);
+      gfx.fillRect(0, 0, size, size);
 
-      // 3. Main Body
+      // 2. Light top-left triangle (creates the top and left bright bevels)
+      const lightColor = baseColor.clone().lighten(35);
+      gfx.fillStyle(lightColor.color, 1);
+      gfx.beginPath();
+      gfx.moveTo(0, 0);
+      gfx.lineTo(size, 0);
+      gfx.lineTo(0, size);
+      gfx.closePath();
+      gfx.fillPath();
+
+      // 3. Center flat color block
+      const pad = Math.floor(size * 0.12); // ~12% thickness for the bevel
       gfx.fillStyle(color, 1);
-      gfx.fillRoundedRect(0, 0, size - 2, size - 4, r);
-
-      // 4. Inner Gradient / Top Edge Highlight
-      const lightColor = baseColor.clone().lighten(30);
-      gfx.fillStyle(lightColor.color, 0.8);
-      gfx.fillRoundedRect(1, 1, size - 4, (size - 4) * 0.4, { tl: r - 1, tr: r - 1, bl: 4, br: 4 });
-
-      // 5. Specular Glossy Shine (Curved gel look at top)
-      gfx.fillStyle(0xffffff, 0.6);
-      gfx.fillRoundedRect(4, 2, size - 10, (size - 4) * 0.25, { tl: r - 3, tr: r - 3, bl: 5, br: 5 });
-
-      // 6. Bottom Inner Shadow (Creates convex bulge)
-      const shadowBevel = baseColor.clone().darken(25);
-      gfx.fillStyle(shadowBevel.color, 0.6);
-      gfx.fillRoundedRect(2, size - 12, size - 6, 6, { tl: 0, tr: 0, bl: r - 2, br: r - 2 });
-
-      // 7. Bright specular dot
-      gfx.fillStyle(0xffffff, 0.9);
-      gfx.fillCircle(8, 8, 3);
-      gfx.fillStyle(0xffffff, 1);
-      gfx.fillCircle(7, 7, 1.5);
+      gfx.fillRect(pad, pad, size - pad * 2, size - pad * 2);
 
       gfx.generateTexture(`block_${index}`, size, size);
       gfx.destroy();
     });
+
+    // Create hollow square for particles
+    const hollowGfx = this.add.graphics();
+    hollowGfx.lineStyle(3, 0xffffff, 1);
+    hollowGfx.strokeRect(2, 2, 12, 12);
+    hollowGfx.generateTexture('hollow_square', 16, 16);
+    hollowGfx.destroy();
 
     // Ghost block texture (3D glass look)
     const ghostGfx = this.add.graphics();
@@ -77,26 +89,10 @@ export class BootScene extends Phaser.Scene {
     invalidGfx.generateTexture('block_invalid', size, size);
     invalidGfx.destroy();
 
-    // Empty cell texture (Deep inset look)
+    // Empty cell texture (Clean, slightly rounded)
     const emptyGfx = this.add.graphics();
-    emptyGfx.fillStyle(0x0F1530, 1);
-    emptyGfx.fillRoundedRect(0, 0, size, size, r);
-    // Inner dark shadow (top-left)
-    emptyGfx.lineStyle(2, 0x050815, 0.8);
-    emptyGfx.beginPath();
-    emptyGfx.arc(r, r, r, Math.PI, Math.PI * 1.5);
-    emptyGfx.lineTo(size - r, 0);
-    emptyGfx.moveTo(0, size - r);
-    emptyGfx.lineTo(0, r);
-    emptyGfx.strokePath();
-    // Inner light highlight (bottom-right)
-    emptyGfx.lineStyle(2, 0x2A3A6A, 0.5);
-    emptyGfx.beginPath();
-    emptyGfx.arc(size - r, size - r, r, 0, Math.PI * 0.5);
-    emptyGfx.lineTo(r, size);
-    emptyGfx.moveTo(size, r);
-    emptyGfx.lineTo(size, size - r);
-    emptyGfx.strokePath();
+    emptyGfx.fillStyle(0x0C122A, 1);
+    emptyGfx.fillRoundedRect(1, 1, size - 2, size - 2, r);
     
     emptyGfx.generateTexture('cell_empty', size, size);
     emptyGfx.destroy();

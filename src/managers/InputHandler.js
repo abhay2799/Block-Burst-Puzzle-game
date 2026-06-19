@@ -21,12 +21,21 @@ export class InputHandler {
       (obj) => { obj.setVisible(false).setPosition(0, 0).setTexture('block_ghost').setAlpha(1); },
       10
     );
+
+    this.isDragging = false;
+    this.dragPointer = null;
+    this.lastPointerPos = { x: 0, y: 0 };
+    this.dragInsideBox = false;
+
+    this.scene.events.on('update', this.update, this);
   }
 
   onDragStart(container, index, pieces, pieceContainers) {
     if (this.scene.isAnimating) return;
+    container._isBeingDragged = true;
     const scene = this.scene;
 
+    scene.tweens.killTweensOf(container);
     scene.tweens.add({
       targets: container,
       scaleX: 1.1, scaleY: 1.1,
@@ -45,6 +54,7 @@ export class InputHandler {
       const targetX = offsetX + cell.col * CELL_SIZE;
       const targetY = offsetY + cell.row * CELL_SIZE;
       
+      scene.tweens.killTweensOf(container.list[i]);
       scene.tweens.add({
         targets: container.list[i],
         x: targetX,
@@ -69,11 +79,18 @@ export class InputHandler {
       }
     }
 
+    this.isDragging = true;
+    this.dragPointer = this.scene.input.activePointer;
+    this.lastPointerPos.x = this.dragPointer.x;
+    this.lastPointerPos.y = this.dragPointer.y;
+    this.dragInsideBox = false;
+
+    SoundManager.startDragSound();
     SoundManager.piecePickup();
   }
 
   onDrag(container, pointer, index, pieces, board) {
-    if (this.scene.isAnimating) return;
+    if (this.scene.isAnimating || !container._isBeingDragged) return;
     container.setPosition(pointer.x, pointer.y);
 
     const piece = pieces[index];
@@ -104,6 +121,11 @@ export class InputHandler {
         this.showPrediction(prediction);
       }
     }
+
+    // Determine if drag is inside the main empty box for the sound sync
+    const cellTotal = CELL_SIZE + GRID_PADDING;
+    this.dragInsideBox = pointer.x >= GRID_OFFSET_X && pointer.x <= GRID_OFFSET_X + GRID_SIZE * cellTotal &&
+                         pointer.y >= GRID_OFFSET_Y && pointer.y <= GRID_OFFSET_Y + GRID_SIZE * cellTotal;
   }
 
   _findNearbyValid(pointerX, pointerY, piece, board) {
@@ -141,6 +163,10 @@ export class InputHandler {
 
   onDragEnd(container, pointer, index, pieces, board, pieceContainers) {
     const scene = this.scene;
+    this.isDragging = false;
+    container._isBeingDragged = false;
+    SoundManager.stopDragSound();
+
     if (scene.isAnimating) { this.returnPieceToSlot(container, index, pieces); return false; }
     this.clearGhosts();
     this.clearPredictions();
@@ -393,6 +419,7 @@ export class InputHandler {
     const offsetX = -(piece.width * cellSize) / 2;
     const offsetY = -(piece.height * cellSize) / 2;
 
+    this.scene.tweens.killTweensOf(container);
     this.scene.tweens.add({
       targets: container,
       x: container.originalX, y: container.originalY,
@@ -405,6 +432,7 @@ export class InputHandler {
 
     let i = 0;
     for (const cell of piece.cells) {
+      this.scene.tweens.killTweensOf(container.list[i]);
       this.scene.tweens.add({
         targets: container.list[i],
         x: offsetX + cell.col * cellSize,
@@ -418,7 +446,26 @@ export class InputHandler {
     }
   }
 
+  update(time, delta) {
+    if (!this.isDragging || !this.dragPointer) return;
+
+    let dx = this.dragPointer.x - this.lastPointerPos.x;
+    let dy = this.dragPointer.y - this.lastPointerPos.y;
+    
+    let speed = 0;
+    if (delta > 0) {
+      speed = Math.sqrt(dx * dx + dy * dy) / delta;
+    }
+    if (isNaN(speed) || !isFinite(speed)) speed = 0;
+
+    this.lastPointerPos.x = this.dragPointer.x;
+    this.lastPointerPos.y = this.dragPointer.y;
+
+    SoundManager.updateDragSound(this.dragInsideBox, speed);
+  }
+
   shutdown() {
+    this.scene.events.off('update', this.update, this);
     this.clearGhosts();
     this.clearPredictions();
     if (this._shadowGfx) { this._shadowGfx.destroy(); this._shadowGfx = null; }

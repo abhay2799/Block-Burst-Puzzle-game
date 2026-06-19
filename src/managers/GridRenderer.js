@@ -21,76 +21,28 @@ export class GridRenderer {
     const totalSize = GRID_SIZE * (CELL_SIZE + GRID_PADDING) - GRID_PADDING;
 
     const gridBg = this.scene.add.graphics();
-    // Deep shadow under the whole board
+    // Stronger shadow under the board
     gridBg.fillStyle(0x000000, 0.4);
-    gridBg.fillRoundedRect(startX - 14, startY - 10, totalSize + 28, totalSize + 28, 18);
+    gridBg.fillRoundedRect(startX - 10, startY - 4, totalSize + 20, totalSize + 20, 16);
     
-    // Main board base
-    gridBg.fillStyle(0x1a2850, 0.5);
-    gridBg.fillRoundedRect(startX - 18, startY - 18, totalSize + 36, totalSize + 36, 22);
+    // Main board base (Glassmorphism white tint)
+    gridBg.fillStyle(0xffffff, 0.05);
+    gridBg.fillRoundedRect(startX - 10, startY - 10, totalSize + 20, totalSize + 20, 16);
     
-    // Inset board background
-    gridBg.fillStyle(0x080E24, 1);
-    gridBg.fillRoundedRect(startX - 14, startY - 14, totalSize + 28, totalSize + 28, 18);
-    
-    // Inner shadow for board
-    gridBg.lineStyle(3, 0x000000, 0.6);
-    gridBg.strokeRoundedRect(startX - 14, startY - 14, totalSize + 28, totalSize + 28, 18);
-    // Highlight at bottom
-    gridBg.lineStyle(2, 0x2A3A6A, 0.6);
-    gridBg.beginPath();
-    gridBg.arc(startX - 14 + 18, startY - 14 + totalSize + 28 - 18, 18, Math.PI / 2, Math.PI);
-    gridBg.lineTo(startX - 14 + totalSize + 28 - 18, startY - 14 + totalSize + 28);
-    gridBg.arc(startX - 14 + totalSize + 28 - 18, startY - 14 + totalSize + 28 - 18, 18, 0, Math.PI / 2);
-    gridBg.strokePath();
+    // Inner white stroke for glass highlight
+    gridBg.lineStyle(1.5, 0xffffff, 0.2);
+    gridBg.strokeRoundedRect(startX - 10, startY - 10, totalSize + 20, totalSize + 20, 16);
 
-    this._createGlowDots(startX, startY, totalSize);
     this._createCells(startX, startY);
     this._initBlockSprites();
   }
 
   _createGlowDots(startX, startY, totalSize) {
-    const dotSpacing = 11;
-    const padding = 6;
-    const left = startX - padding;
-    const top = startY - padding;
-    const right = startX + totalSize + padding;
-    const bottom = startY + totalSize + padding;
-
-    const positions = [];
-    for (let x = left; x <= right; x += dotSpacing) positions.push({ x, y: top - 3 });
-    for (let y = top + dotSpacing; y <= bottom; y += dotSpacing) positions.push({ x: right + 3, y });
-    for (let x = right; x >= left; x -= dotSpacing) positions.push({ x, y: bottom + 3 });
-    for (let y = bottom - dotSpacing; y >= top; y -= dotSpacing) positions.push({ x: left - 3, y });
-
-    this.glowDotsGfx = this.scene.add.graphics().setDepth(1);
-    this._dotPositions = positions;
-    this._drawDots(0);
-
-    this._dotTimer = this.scene.time.addEvent({
-      delay: 150,
-      loop: true,
-      callback: () => {
-        const time = this.scene.time.now / 1000;
-        this._drawDots(time);
-      }
-    });
+    // Disabled for Block Blast style
   }
 
   _drawDots(time) {
-    this.glowDotsGfx.clear();
-    const color = this._glowColor;
-    const intensity = this._glowIntensity;
-    const speed = this._dotWaveSpeed;
-    for (let i = 0; i < this._dotPositions.length; i++) {
-      const pos = this._dotPositions[i];
-      const phase = (i / this._dotPositions.length) * Math.PI * 2;
-      const alpha = (0.35 + Math.sin(time * speed + phase) * 0.25) * intensity;
-      this.glowDotsGfx.fillStyle(color, alpha * 0.3);
-      this.glowDotsGfx.fillCircle(pos.x, pos.y, 3);
-      this.glowDotsGfx.fillStyle(color, alpha * 0.9);
-      this.glowDotsGfx.fillCircle(pos.x, pos.y, 1.5);
-    }
+    // Disabled
   }
 
   _createCells(startX, startY) {

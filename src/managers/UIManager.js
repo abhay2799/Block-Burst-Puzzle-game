@@ -21,13 +21,6 @@ export class UIManager {
   _createMainUI() {
     const scene = this.scene;
 
-    scene.add.text(16, 22, '👑', { fontSize: '24px' }).setOrigin(0, 0);
-
-    this.highScoreText = scene.add.text(46, 24, `${this.scoreManager.getHighScore().toLocaleString()}`, {
-      fontSize: '20px', fontFamily: '"Fredoka", sans-serif',
-      fontStyle: 'bold', color: '#FFE66D'
-    }).setOrigin(0, 0);
-
     const settingsCircle = scene.add.graphics().setDepth(100);
     settingsCircle.fillStyle(0x2a3565, 0.6);
     settingsCircle.fillCircle(GAME_WIDTH - 28, 36, 20);
@@ -47,23 +40,29 @@ export class UIManager {
       scene.showPauseMenu();
     });
 
-    this.scoreText = scene.add.text(GAME_WIDTH / 2, 48, '0', {
-      fontSize: '48px', fontFamily: '"Fredoka", sans-serif',
+    this.scoreText = scene.add.text(GAME_WIDTH / 2, 60, '0', {
+      fontSize: '48px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: '#ffffff',
       shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 4, fill: true }
     }).setOrigin(0.5, 0);
 
     this.comboText = scene.add.text(GAME_WIDTH / 2, GRID_OFFSET_Y + 180, '', {
-      fontSize: '38px', fontFamily: '"Fredoka", sans-serif',
+      fontSize: '38px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: '#4488CC',
-      stroke: '#FFD700', strokeThickness: 6
+      stroke: '#FFD700', strokeThickness: 6,
+      align: 'center'
     }).setOrigin(0.5).setAlpha(0).setDepth(20);
 
     this.scorePopup = scene.add.text(GAME_WIDTH / 2, GRID_OFFSET_Y + 180, '', {
-      fontSize: '28px', fontFamily: '"Fredoka", sans-serif',
+      fontSize: '28px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: '#4ECDC4',
       stroke: '#000000', strokeThickness: 3
     }).setOrigin(0.5).setAlpha(0).setDepth(20);
+    
+    this.levelText = scene.add.text(20, 36, 'Level 1', {
+      fontSize: '18px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+      fontStyle: 'bold', color: '#FFD700',
+    }).setOrigin(0, 0.5).setDepth(20);
 
     this.screenFlash = scene.add.image(0, 0, 'screen_flash').setOrigin(0).setDepth(50).setAlpha(0);
   }
@@ -72,22 +71,22 @@ export class UIManager {
     const scene = this.scene;
     const bestScore = this.scoreManager.getHighScore();
 
-    this.bestScoreLabel = scene.add.text(GAME_WIDTH / 2, 104, bestScore > 0 ? `BEST: ${bestScore.toLocaleString()}` : '', {
-      fontSize: '14px', fontFamily: '"Fredoka", sans-serif',
+    this.bestScoreLabel = scene.add.text(GAME_WIDTH - 65, 36, bestScore > 0 ? `BEST: ${bestScore.toLocaleString()}` : '', {
+      fontSize: '14px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: '#FFD93D'
-    }).setOrigin(0.5).setDepth(5).setAlpha(0.9);
+    }).setOrigin(1, 0.5).setDepth(5).setAlpha(0.9);
 
-    this.distanceText = scene.add.text(GAME_WIDTH / 2, 125, '', {
-      fontSize: '11px', fontFamily: '"Fredoka", sans-serif', color: '#66DD88'
+    this.distanceText = scene.add.text(GAME_WIDTH / 2, 115, '', {
+      fontSize: '11px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', color: '#66DD88'
     }).setOrigin(0.5).setDepth(5).setAlpha(0);
 
     this.motivationText = scene.add.text(GAME_WIDTH / 2, GRID_OFFSET_Y - 22, '', {
-      fontSize: '14px', fontFamily: '"Fredoka", sans-serif',
+      fontSize: '14px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: '#FFD700'
     }).setOrigin(0.5).setDepth(15).setAlpha(0);
 
     this.newHSBanner = scene.add.text(GAME_WIDTH / 2, 140, '🔥 NEW HIGH SCORE! 🔥', {
-      fontSize: '16px', fontFamily: '"Fredoka", sans-serif',
+      fontSize: '16px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: '#FFD700',
       stroke: '#FF6600', strokeThickness: 3
     }).setOrigin(0.5).setDepth(20).setAlpha(0);
@@ -105,6 +104,12 @@ export class UIManager {
       this._lastDisplayedScore = targetScore;
     } else {
       this._rollDigits(currentScore, targetScore);
+    }
+
+    if (this.levelText && this.scoreManager.getLevel) {
+      const isBossLevel = this.scoreManager.getLevel() % 3 === 0;
+      this.levelText.setText(`Round ${this.scoreManager.getLevel()}`);
+      this.levelText.setColor(isBossLevel ? '#FF4444' : '#FFD700');
     }
 
     scene.tweens.add({
@@ -149,7 +154,7 @@ export class UIManager {
     const fontSize = 48;
     const charWidth = 26;
     const startX = GAME_WIDTH / 2 - (digitCount * charWidth) / 2;
-    const baseY = 55;
+    const baseY = 60;
 
     // Determine which digits changed (comparing from right)
     const maxLen = Math.max(fromStr.length, toStr.length);
@@ -164,7 +169,7 @@ export class UIManager {
       const ch = formatted[i];
       const x = startX + i * charWidth + charWidth / 2;
       const digit = scene.add.text(x, baseY, ch, {
-        fontSize: `${fontSize}px`, fontFamily: '"Fredoka", sans-serif',
+        fontSize: `${fontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
         fontStyle: 'bold', color: '#ffffff'
       }).setOrigin(0.5, 0).setDepth(6);
 
@@ -211,32 +216,92 @@ export class UIManager {
     });
   }
 
-  showComboText(combo) {
+  showWinningStreak() {
     const scene = this.scene;
-    const messages = ['', '', 'Combo x2', 'Great!', 'Awesome!', 'Excellent!', 'Incredible!', 'Unstoppable!', 'LEGENDARY!'];
-    const colors = ['#ffffff', '#ffffff', '#FFD700', '#FF8800', '#FF4444', '#FF00FF', '#00FFFF', '#00FF00', '#FFD700'];
+    SoundManager.levelComplete();
+    
+    this.motivationText.setText("🏆 WINNING STREAK! 🏆\nNext level is TOUGH!");
+    this.motivationText.setColor('#FFD700');
+    this.motivationText.setAlpha(0).setScale(0.5);
+    scene.tweens.chain({
+      targets: this.motivationText,
+      tweens: [
+        { alpha: 1, scaleX: 1.2, scaleY: 1.2, duration: 400, ease: 'Back.easeOut' },
+        { scaleX: 1, scaleY: 1, duration: 200 },
+        { scaleX: 1.05, scaleY: 1.05, duration: 600, yoyo: true, repeat: 3, ease: 'Sine.easeInOut' },
+        { alpha: 0, duration: 500 }
+      ]
+    });
+  }
 
-    const msgIndex = Math.min(combo, messages.length - 1);
-    const msg = messages[msgIndex] || `Combo x${combo}`;
-    const color = colors[msgIndex] || '#FFD700';
+  showComboText(combo, placedCells, glowColor) {
+    const scene = this.scene;
+    const words = ["", "", "Good!", "Great!", "Amazing!", "Excellent!", "Wonderful!", "Master!", "Pro!", "Genius!"];
+    const wordIndex = Math.min(combo, words.length - 1);
+    const msg = words[wordIndex];
+    
+    if (!msg) return;
+
+    // Determine hex strings for the bright color and a darker stroke color
+    const hexColor = '#' + glowColor.toString(16).padStart(6, '0');
+    const darkerColor = Phaser.Display.Color.IntegerToColor(glowColor).darken(40).color;
+    const darkHex = '#' + darkerColor.toString(16).padStart(6, '0');
+
+    if (combo >= 2 && words[wordIndex]) {
+      SoundManager.speak(words[wordIndex].replace('!', ''));
+    }
 
     this.comboText.setText(msg);
-    this.comboText.setColor(color);
-    this.comboText.setAlpha(1).setScale(0);
+    this.comboText.setColor(hexColor);
+    this.comboText.setStroke(darkHex, 8);
+    // Remove shadow, keep it flat 3D looking like the reference image
+    this.comboText.setShadow(0, 0, '#000000', 0, false, false);
+    
+    // Position near the placed piece
+    let cx = GAME_WIDTH / 2;
+    let cy = GRID_OFFSET_Y + 160;
+    if (placedCells && placedCells.length > 0) {
+      let sumX = 0, sumY = 0;
+      placedCells.forEach(p => {
+        sumX += GRID_OFFSET_X + p.col * (CELL_SIZE + GRID_PADDING) + CELL_SIZE/2;
+        sumY += GRID_OFFSET_Y + p.row * (CELL_SIZE + GRID_PADDING) + CELL_SIZE/2;
+      });
+      cx = sumX / placedCells.length;
+      cy = sumY / placedCells.length;
+    }
 
-    const targetScale = 1 + Math.min(combo * 0.1, 0.8);
+    const startX = Math.min(cx + 50, GAME_WIDTH - 60);
+    const startY = cy;
+
+    this.comboText.setPosition(startX, startY);
+    this.comboText.setAlpha(1).setScale(0);
+    this.comboText.setAngle(Phaser.Math.Between(-5, 5));
+
+    const targetScale = 1 + Math.min(combo * 0.1, 0.6);
 
     scene.tweens.chain({
       targets: this.comboText,
       tweens: [
-        { scaleX: targetScale + 0.3, scaleY: targetScale + 0.3, duration: 200, ease: 'Back.easeOut' },
-        { scaleX: targetScale, scaleY: targetScale, duration: 150 },
-        { alpha: 0, scaleY: 0.3, duration: 250, ease: 'Power2', delay: TIMING.COMBO_TEXT_DURATION }
+        { 
+          scaleX: targetScale + 0.3, scaleY: targetScale + 0.3, 
+          duration: 300, ease: 'Back.easeOut' 
+        },
+        { 
+          scaleX: targetScale, scaleY: targetScale, 
+          duration: 200 
+        },
+        { 
+          y: startY - 50, // Float upwards slightly
+          alpha: 0, 
+          duration: 400, 
+          ease: 'Power2', 
+          delay: TIMING.COMBO_TEXT_DURATION || 600 
+        }
       ]
     });
 
-    if (combo >= 4) {
-      scene.cameras.main.shake(200, (combo * 2) / 1000);
+    if (combo >= 3) {
+      scene.cameras.main.shake(300, (combo * 3) / 1000);
     }
   }
 

@@ -4,12 +4,31 @@ export class ScoreManager {
   constructor() {
     this.score = 0;
     this.combo = 0;
+    this.level = 1;
+    this.linesClearedThisLevel = 0;
     this.highScore = this.loadHighScore();
   }
 
   reset() {
     this.score = 0;
     this.combo = 0;
+    this.level = 1;
+    this.linesClearedThisLevel = 0;
+  }
+
+  getLevel() {
+    return this.level;
+  }
+
+  advanceLevel() {
+    this.level++;
+    this.linesClearedThisLevel = 0;
+    return this.level;
+  }
+
+  addLinesCleared(lines) {
+    this.linesClearedThisLevel += lines;
+    return this.linesClearedThisLevel;
   }
 
   addPlacementPoints(cellCount) {
