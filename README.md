@@ -1,6 +1,6 @@
 # Block Blast!
 
-A fully interactive Block Blast puzzle game clone built with Phaser 4 and procedural sound effects.
+A fully interactive Block Burst puzzle game built with Phaser 4 and procedural sound effects.
 
 ## How to Play
 
