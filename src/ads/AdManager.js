@@ -159,12 +159,9 @@ export const AdManager = {
     AdMob.addListener('bannerAdFailedToLoad', (info) => {
       console.warn('[AdManager] ❌ Banner FAILED to load:', JSON.stringify(info));
       bannerShowing = false;
-      // Retry after delay
-      if (this._bannerRetryCount < MAX_RETRY_ATTEMPTS) {
-        this._bannerRetryCount++;
-        console.log(`[AdManager] Banner retry ${this._bannerRetryCount}/${MAX_RETRY_ATTEMPTS} in ${RETRY_DELAY_MS}ms`);
-        setTimeout(() => this.showBanner(), RETRY_DELAY_MS);
-      }
+      // AdMob often returns 'No Fill' when rate-limiting.
+      // We continuously retry every 15s in the background. When AdMob lifts the limit, it will seamlessly appear.
+      setTimeout(() => this.showBanner(), 15000);
     });
 
     // ─── Interstitial listeners ───
@@ -192,6 +189,7 @@ export const AdManager = {
 
     AdMob.addListener('interstitialAdShowed', () => {
       console.log('[AdManager] Interstitial ad showed');
+      bannerShowing = false; // Mark as false so showBanner() runs resumeBanner() when dismissed
     });
 
     AdMob.addListener('interstitialAdFailedToShow', (info) => {
@@ -215,6 +213,7 @@ export const AdManager = {
         this._interstitialCallback();
         this._interstitialCallback = null;
       }
+      setTimeout(() => this.showBanner(), 500); // Trigger resumeBanner safely
     });
 
     // ─── Rewarded Video listeners ───
@@ -240,6 +239,7 @@ export const AdManager = {
 
     AdMob.addListener(RewardAdPluginEvents.Showed, () => {
       console.log('[AdManager] Rewarded ad showed');
+      bannerShowing = false; // Mark as false so showBanner() runs resumeBanner() when dismissed
     });
 
     AdMob.addListener(RewardAdPluginEvents.FailedToShow, (info) => {
@@ -267,6 +267,7 @@ export const AdManager = {
         this._rewardCallback(this._userEarnedReward);
         this._rewardCallback = null;
       }
+      setTimeout(() => this.showBanner(), 500); // Trigger resumeBanner safely
     });
   },
 
@@ -419,19 +420,27 @@ export const AdManager = {
     }
 
     try {
-      const adId = getAdId('banner');
-      console.log('[AdManager] Showing banner with ID:', adId);
-      await AdMob.showBanner({
-        adId: adId,
-        adSize: BannerAdSize.ADAPTIVE_BANNER,
-        position: BannerAdPosition.BOTTOM_CENTER,
-        margin: 60 // Push banner up above the hidden immersive navigation bar
-      });
+      // Safely resume instead of recreating to prevent duplicate view crashes
+      await AdMob.resumeBanner();
       bannerShowing = true;
-      console.log('[AdManager] ✅ Banner show request sent');
-    } catch (e) {
-      console.warn('[AdManager] ❌ Banner show failed:', e.message || e);
-      console.warn('[AdManager] Banner error details:', JSON.stringify(e));
+      console.log('[AdManager] ✅ Banner resumed safely');
+      return;
+    } catch (resumeError) {
+      // If resume fails (banner doesn't exist), fall back to creating it
+      try {
+        const adId = getAdId('banner');
+        console.log('[AdManager] Showing banner with ID:', adId);
+        await AdMob.showBanner({
+          adId: adId,
+          adSize: BannerAdSize.ADAPTIVE_BANNER,
+          position: BannerAdPosition.BOTTOM_CENTER,
+          margin: 60
+        });
+        bannerShowing = true;
+        console.log('[AdManager] ✅ Banner show request sent');
+      } catch (e) {
+        console.warn('[AdManager] ❌ Banner show failed:', e.message || e);
+      }
     }
   },
 
