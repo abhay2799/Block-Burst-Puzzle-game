@@ -25,16 +25,15 @@ export class SplashScene extends Phaser.Scene {
     const nameTargetY = cy - 20;
     const studioTargetY = cy + 30;
 
-    // Force QHD font rendering by drawing text at 2.5x size and scaling it down visually
     const name = this.add.text(cx, nameTargetY + 15, 'DEVLANCE', {
-      fontSize: '120px', fontFamily: '"Arial Black", Impact, sans-serif',
-      fontStyle: '900', color: '#ffffff', align: 'center'
-    }).setOrigin(0.5, 0.5).setLetterSpacing(15).setScale(0.4).setAlpha(0); 
+      fontSize: '48px', fontFamily: '"Arial Black", Impact, sans-serif',
+      fontStyle: '900', color: '#ffffff', align: 'center', resolution: 4
+    }).setOrigin(0.5, 0.5).setLetterSpacing(6).setAlpha(0); 
 
     const studio = this.add.text(cx, studioTargetY + 10, 'STUDIO', {
-      fontSize: '50px', fontFamily: '"Arial", Helvetica, sans-serif',
-      fontStyle: 'bold', color: '#888888', align: 'center'
-    }).setOrigin(0.5, 0.5).setLetterSpacing(50).setScale(0.4).setAlpha(0);
+      fontSize: '20px', fontFamily: '"Arial", Helvetica, sans-serif',
+      fontStyle: 'bold', color: '#888888', align: 'center', resolution: 4
+    }).setOrigin(0.5, 0.5).setLetterSpacing(20).setAlpha(0);
 
     // The signature yellow line
     const divider = this.add.rectangle(cx, cy + 4, 240, 2, 0xFFB300).setOrigin(0.5, 0.5).setScale(0, 1);
