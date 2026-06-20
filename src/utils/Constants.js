@@ -13,7 +13,7 @@ export const PIECE_SCALE_SMALL = 0.55;
 export const PIECE_SCALE_FULL = 1.0;
 export const PIECE_AREA_Y = 880;
 
-export const DRAG_FINGER_OFFSET_Y = -180; // Keeps the block well above the thumb for clear visibility
+export const DRAG_FINGER_OFFSET_Y = -240; // Increased to ensure pieces never get under the thumb on large phones
 
 export const COLORS = [
   0xEF7A1D,  // Classic Orange

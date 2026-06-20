@@ -347,7 +347,27 @@ export class GameScene extends Phaser.Scene {
   }
 
   _createParallaxShapes() {
-    // Disabled to prevent users from mistaking the background shapes for UI glitches or cursors
+    for (let i = 0; i < 8; i++) {
+      const g = this.add.graphics().setDepth(-5).setAlpha(Phaser.Math.FloatBetween(0.03, 0.08));
+      const size = Phaser.Math.Between(20, 60);
+      g.fillStyle(0xffffff, 1);
+      if (i % 3 === 0) {
+        g.fillTriangle(size / 2, 0, 0, size, size, size);
+      } else if (i % 3 === 1) {
+        g.fillRect(0, 0, size, size);
+      } else {
+        g.fillCircle(size / 2, size / 2, size / 2);
+      }
+      g.setPosition(Phaser.Math.Between(0, GAME_WIDTH), Phaser.Math.Between(0, GAME_HEIGHT));
+
+      this.tweens.add({
+        targets: g,
+        y: g.y - Phaser.Math.Between(40, 120),
+        x: g.x + Phaser.Math.Between(-30, 30),
+        duration: Phaser.Math.Between(8000, 15000),
+        yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+      });
+    }
   }
 
   showTutorialIfFirstTime() {
