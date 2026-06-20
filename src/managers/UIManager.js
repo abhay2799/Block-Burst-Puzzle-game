@@ -344,7 +344,7 @@ export class UIManager {
 
   showComboText(combo, placedCells, glowColor) {
     const scene = this.scene;
-    const words = ["", "", "Good!", "Great!", "Amazing!", "Excellent!", "Wonderful!", "Master!", "Pro!", "Genius!"];
+    const words = ["", "", "Good!", "Great!", "Amazing!", "Awesome!", "Wonderful!", "Incredible!", "Unstoppable!", "Legendary!"];
     const wordIndex = Math.min(combo, words.length - 1);
     const msg = words[wordIndex];
     

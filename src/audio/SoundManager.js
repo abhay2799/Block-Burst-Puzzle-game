@@ -49,12 +49,30 @@ function delayedPlay(key, delay) {
   }, delay);
 }
 
+window.speechUtterances = window.speechUtterances || [];
+
 function speakVoice(text) {
   if (!soundEnabled || !window.speechSynthesis) return;
   const msg = new SpeechSynthesisUtterance(text);
   msg.rate = 1.1; // Slightly faster for game pacing
   msg.pitch = 1.2; // Slightly higher pitch for enthusiasm
   window.speechSynthesis.speak(msg);
+  
+  // Prevent garbage collection bug on some Android webviews
+  window.speechUtterances.push(msg);
+  msg.onend = () => {
+    const index = window.speechUtterances.indexOf(msg);
+    if (index > -1) window.speechUtterances.splice(index, 1);
+  };
+}
+
+function initSpeech() {
+  if (window.speechSynthesis && !window.speechInitialized) {
+    const dummy = new SpeechSynthesisUtterance('');
+    dummy.volume = 0;
+    window.speechSynthesis.speak(dummy);
+    window.speechInitialized = true;
+  }
 }
 
 function stopSFX(key) {
@@ -154,6 +172,7 @@ export const SoundManager = {
   },
 
   playGameStart() {
+    initSpeech();
     playSFX('gameStart');
     vibrate([30, 50, 30, 80]);
   },
@@ -283,6 +302,7 @@ export const SoundManager = {
   },
 
   uiClick() {
+    initSpeech();
     if (soundEnabled && soundManager) {
       try { soundManager.play('buttonClick', { volume: 1.0 }); } catch(e) {}
     }
