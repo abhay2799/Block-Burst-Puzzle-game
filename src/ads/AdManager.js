@@ -156,9 +156,10 @@ export const AdManager = {
       this._bannerRetryCount = 0;
     });
 
-    AdMob.addListener('bannerAdFailedToLoad', (info) => {
+    AdMob.addListener('bannerAdFailedToLoad', async (info) => {
       console.warn('[AdManager] ❌ Banner FAILED to load:', JSON.stringify(info));
       bannerShowing = false;
+      try { await AdMob.removeBanner(); } catch(e) {}
       // AdMob often returns 'No Fill' when rate-limiting.
       // We continuously retry every 15s in the background. When AdMob lifts the limit, it will seamlessly appear.
       setTimeout(() => this.showBanner(), 15000);
