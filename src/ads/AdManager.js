@@ -423,6 +423,11 @@ export const AdManager = {
     try {
       const adId = getAdId('banner');
       console.log('[AdManager] Showing banner with ID:', adId);
+      
+      // CRITICAL FIX: If a banner already exists (e.g. it failed to load, or was hidden),
+      // calling showBanner again will crash the plugin. We MUST remove it first to ensure a clean slate.
+      await AdMob.removeBanner().catch(() => {});
+
       await AdMob.showBanner({
         adId: adId,
         adSize: BannerAdSize.ADAPTIVE_BANNER,
@@ -452,9 +457,10 @@ export const AdManager = {
 
     try {
       bannerShowing = false;
-      await AdMob.hideBanner();
+      // We completely remove the banner instead of hiding it, so it can be cleanly recreated
+      await AdMob.removeBanner();
     } catch (e) {
-      console.warn('[AdManager] Banner hide failed:', e.message || e);
+      console.warn('[AdManager] Banner hide/remove failed:', e.message || e);
     }
   },
 
