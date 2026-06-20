@@ -159,10 +159,12 @@ export const AdManager = {
     AdMob.addListener('bannerAdFailedToLoad', (info) => {
       console.warn('[AdManager] ❌ Banner FAILED to load:', JSON.stringify(info));
       bannerShowing = false;
-      // Always retry banner ads after delay so it always appears eventually
-      this._bannerRetryCount++;
-      console.log(`[AdManager] Banner retry ${this._bannerRetryCount} in ${RETRY_DELAY_MS}ms`);
-      setTimeout(() => this.showBanner(), RETRY_DELAY_MS);
+      // Retry after delay
+      if (this._bannerRetryCount < MAX_RETRY_ATTEMPTS) {
+        this._bannerRetryCount++;
+        console.log(`[AdManager] Banner retry ${this._bannerRetryCount}/${MAX_RETRY_ATTEMPTS} in ${RETRY_DELAY_MS}ms`);
+        setTimeout(() => this.showBanner(), RETRY_DELAY_MS);
+      }
     });
 
     // ─── Interstitial listeners ───
@@ -190,7 +192,6 @@ export const AdManager = {
 
     AdMob.addListener('interstitialAdShowed', () => {
       console.log('[AdManager] Interstitial ad showed');
-      this.hideBanner();
     });
 
     AdMob.addListener('interstitialAdFailedToShow', (info) => {
@@ -214,7 +215,6 @@ export const AdManager = {
         this._interstitialCallback();
         this._interstitialCallback = null;
       }
-      setTimeout(() => this.showBanner(), 500);
     });
 
     // ─── Rewarded Video listeners ───
@@ -240,7 +240,6 @@ export const AdManager = {
 
     AdMob.addListener(RewardAdPluginEvents.Showed, () => {
       console.log('[AdManager] Rewarded ad showed');
-      this.hideBanner();
     });
 
     AdMob.addListener(RewardAdPluginEvents.FailedToShow, (info) => {
@@ -268,7 +267,6 @@ export const AdManager = {
         this._rewardCallback(this._userEarnedReward);
         this._rewardCallback = null;
       }
-      setTimeout(() => this.showBanner(), 500);
     });
   },
 
@@ -423,11 +421,6 @@ export const AdManager = {
     try {
       const adId = getAdId('banner');
       console.log('[AdManager] Showing banner with ID:', adId);
-      
-      // CRITICAL FIX: If a banner already exists (e.g. it failed to load, or was hidden),
-      // calling showBanner again will crash the plugin. We MUST remove it first to ensure a clean slate.
-      await AdMob.removeBanner().catch(() => {});
-
       await AdMob.showBanner({
         adId: adId,
         adSize: BannerAdSize.ADAPTIVE_BANNER,
@@ -439,13 +432,12 @@ export const AdManager = {
     } catch (e) {
       console.warn('[AdManager] ❌ Banner show failed:', e.message || e);
       console.warn('[AdManager] Banner error details:', JSON.stringify(e));
-      bannerShowing = false;
-      // Retry showing banner to ensure it never disappears permanently
-      setTimeout(() => this.showBanner(), 5000);
     }
   },
 
   async hideBanner() {
+    if (!bannerShowing) return;
+
     if (!this._isNativePlatform()) {
       const placeholder = document.getElementById('ad-banner-placeholder');
       if (placeholder) {
@@ -456,11 +448,10 @@ export const AdManager = {
     }
 
     try {
+      await AdMob.hideBanner();
       bannerShowing = false;
-      // We completely remove the banner instead of hiding it, so it can be cleanly recreated
-      await AdMob.removeBanner();
     } catch (e) {
-      console.warn('[AdManager] Banner hide/remove failed:', e.message || e);
+      console.warn('[AdManager] Banner hide failed:', e.message || e);
     }
   },
 
