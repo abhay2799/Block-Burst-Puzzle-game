@@ -49,6 +49,8 @@ export class InputHandler {
     const offsetX = -(piece.width * CELL_SIZE) / 2;
     const offsetY = -(piece.height * CELL_SIZE) / 2 + DRAG_FINGER_OFFSET_Y;
 
+    const cellTotal = CELL_SIZE + GRID_PADDING;
+
     for (const sprite of container.list) {
       if (sprite._cellCol === undefined) continue;
 
