@@ -383,6 +383,8 @@ export const AdManager = {
   },
 
   async showBanner() {
+    if (bannerShowing) return;
+
     if (!this._isNativePlatform()) {
       console.log('[AdManager] Showing web placeholder for Banner Ad');
       let placeholder = document.getElementById('ad-banner-placeholder');
