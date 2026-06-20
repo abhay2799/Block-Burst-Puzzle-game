@@ -4,34 +4,21 @@
  * PRODUCTION AD UNIT IDS:
  * Banner:       ca-app-pub-3214717672189600/3883361100
  * Interstitial:  ca-app-pub-3214717672189600/7614036794
- *
- * Test IDs (Google official):
- * Banner:       ca-app-pub-3940256099942544/6300978111
- * Interstitial:  ca-app-pub-3940256099942544/1033173712
- * Rewarded:     ca-app-pub-3940256099942544/5224354917
  */
-
 import { Capacitor } from '@capacitor/core';
-import { AdMob, BannerAdSize, BannerAdPosition } from '@capacitor-community/admob';
+import { AdMob, BannerAdSize, BannerAdPosition, RewardAdPluginEvents } from '@capacitor-community/admob';
 
 // ═══════════════════════════════════════════════
-// CONFIGURATION — Change USE_TEST_IDS to true for dev
+// PRODUCTION AD UNIT IDS
 // ═══════════════════════════════════════════════
-const USE_TEST_IDS = false;
-
 const AD_IDS = {
-  banner: {
-    production: 'ca-app-pub-3214717672189600/3883361100',
-    test: 'ca-app-pub-3940256099942544/6300978111',
-  },
-  interstitial: {
-    production: 'ca-app-pub-3214717672189600/7614036794',
-    test: 'ca-app-pub-3940256099942544/1033173712',
-  },
+  banner: 'ca-app-pub-3214717672189600/3883361100',
+  interstitial: 'ca-app-pub-3214717672189600/7614036794',
+  rewarded: 'ca-app-pub-3214717672189600/9393296941'
 };
 
 function getAdId(type) {
-  return USE_TEST_IDS ? AD_IDS[type].test : AD_IDS[type].production;
+  return AD_IDS[type];
 }
 
 // ═══════════════════════════════════════════════
@@ -39,6 +26,7 @@ function getAdId(type) {
 // ═══════════════════════════════════════════════
 let admobInitialized = false;
 let interstitialLoaded = false;
+let rewardedLoaded = false;
 let bannerShowing = false;
 let initializationInProgress = false;
 
@@ -49,11 +37,12 @@ const RETRY_DELAY_MS = 5000;
 export const AdManager = {
   _isShowing: false,
   _lastInterstitialTime: 0,
-  MIN_INTERSTITIAL_INTERVAL: 180000, // 3 minutes
+  MIN_INTERSTITIAL_INTERVAL: 0, // Removed interval per user request
   _listenersRegistered: false,
   _gameOverCount: 0,
   _gameInstance: null,
   _interstitialRetryCount: 0,
+  _rewardedRetryCount: 0,
   _bannerRetryCount: 0,
 
   _restoreInput() {
@@ -83,7 +72,7 @@ export const AdManager = {
   },
 
   shouldShowGameOverAd() {
-    return true;
+    return true; // Always show on Game Over
   },
 
   /**
@@ -123,9 +112,10 @@ export const AdManager = {
     try {
       console.log('[AdManager] ═══ Initializing AdMob ═══');
       console.log('[AdManager] Platform:', Capacitor.getPlatform());
-      console.log('[AdManager] USE_TEST_IDS:', USE_TEST_IDS);
+      console.log('[AdManager] Mode: PRODUCTION (Test Ads Disabled)');
       console.log('[AdManager] Banner ID:', getAdId('banner'));
       console.log('[AdManager] Interstitial ID:', getAdId('interstitial'));
+      console.log('[AdManager] Rewarded ID:', getAdId('rewarded'));
 
       await AdMob.initialize({
         requestTrackingAuthorization: false,
@@ -142,8 +132,9 @@ export const AdManager = {
         this._registerListeners();
       }
 
-      // Pre-load interstitial
+      // Pre-load ads
       this.prepareInterstitial();
+      this.prepareRewardVideoAd();
 
       return true;
     } catch (e) {
@@ -225,11 +216,64 @@ export const AdManager = {
         this._interstitialCallback = null;
       }
     });
+
+    // ─── Rewarded Video listeners ───
+    AdMob.addListener(RewardAdPluginEvents.Loaded, () => {
+      console.log('[AdManager] ✅ Rewarded ad loaded');
+      rewardedLoaded = true;
+      this._rewardedRetryCount = 0;
+    });
+
+    AdMob.addListener(RewardAdPluginEvents.FailedToLoad, (info) => {
+      console.warn('[AdManager] ❌ Rewarded FAILED to load:', JSON.stringify(info));
+      rewardedLoaded = false;
+      this._isShowing = false;
+      if (this._rewardCallback) {
+        this._rewardCallback(false);
+        this._rewardCallback = null;
+      }
+      if (this._rewardedRetryCount < MAX_RETRY_ATTEMPTS) {
+        this._rewardedRetryCount++;
+        setTimeout(() => this.prepareRewardVideoAd(), RETRY_DELAY_MS);
+      }
+    });
+
+    AdMob.addListener(RewardAdPluginEvents.Showed, () => {
+      console.log('[AdManager] Rewarded ad showed');
+    });
+
+    AdMob.addListener(RewardAdPluginEvents.FailedToShow, (info) => {
+      console.warn('[AdManager] ❌ Rewarded FAILED to show:', JSON.stringify(info));
+      this._isShowing = false;
+      this._restoreInput();
+      this.prepareRewardVideoAd();
+      if (this._rewardCallback) {
+        this._rewardCallback(false);
+        this._rewardCallback = null;
+      }
+    });
+
+    AdMob.addListener(RewardAdPluginEvents.Rewarded, (rewardItem) => {
+      console.log('[AdManager] User earned reward:', rewardItem);
+      this._userEarnedReward = true;
+    });
+
+    AdMob.addListener(RewardAdPluginEvents.Dismissed, () => {
+      console.log('[AdManager] Rewarded ad dismissed');
+      this._isShowing = false;
+      this._restoreInput();
+      this.prepareRewardVideoAd();
+      if (this._rewardCallback) {
+        this._rewardCallback(this._userEarnedReward);
+        this._rewardCallback = null;
+      }
+    });
   },
 
   resetAdCounters() {
     this._interstitialRetryCount = 0;
     this._bannerRetryCount = 0;
+    this._rewardedRetryCount = 0;
   },
 
   async prepareInterstitial() {
@@ -238,8 +282,7 @@ export const AdManager = {
     try {
       console.log('[AdManager] Preparing interstitial...');
       await AdMob.prepareInterstitial({
-        adId: getAdId('interstitial'),
-        isTesting: USE_TEST_IDS,
+        adId: getAdId('interstitial')
       });
       interstitialLoaded = true;
       console.log('[AdManager] ✅ Interstitial prepared');
@@ -288,11 +331,85 @@ export const AdManager = {
     }
   },
 
+  async prepareRewardVideoAd() {
+    if (!admobInitialized) return;
+
+    try {
+      console.log('[AdManager] Preparing rewarded video...');
+      await AdMob.prepareRewardVideoAd({
+        adId: getAdId('rewarded')
+      });
+      rewardedLoaded = true;
+      console.log('[AdManager] ✅ Rewarded video prepared');
+    } catch (e) {
+      console.warn('[AdManager] Rewarded video prepare failed:', e.message || e);
+      rewardedLoaded = false;
+    }
+  },
+
+  async showRewardVideoAd(scene, onComplete) {
+    if (this._isShowing) {
+      onComplete(false);
+      return;
+    }
+
+    if (this._isNativePlatform()) {
+      if (admobInitialized && rewardedLoaded) {
+        this._isShowing = true;
+        this._userEarnedReward = false;
+        try {
+          rewardedLoaded = false;
+          this._rewardCallback = onComplete;
+          console.log('[AdManager] Showing rewarded video...');
+          await AdMob.showRewardVideoAd();
+        } catch (e) {
+          console.warn('[AdManager] Rewarded video show error:', e.message || e);
+          this._isShowing = false;
+          this._rewardCallback = null;
+          this.prepareRewardVideoAd();
+          onComplete(false);
+        }
+      } else {
+        console.log('[AdManager] Rewarded video not ready, skipping (native)');
+        this.prepareRewardVideoAd();
+        onComplete(false); // Ad not ready, no reward
+      }
+    } else {
+      // Web/dev — show placeholder
+      this._showPlaceholderRewardVideo(scene, onComplete);
+    }
+  },
+
   async showBanner() {
     if (bannerShowing) return;
 
     if (!this._isNativePlatform()) {
-      console.log('[AdManager] Banner skipped (not native platform)');
+      console.log('[AdManager] Showing web placeholder for Banner Ad');
+      let placeholder = document.getElementById('ad-banner-placeholder');
+      if (!placeholder) {
+        placeholder = document.createElement('div');
+        placeholder.id = 'ad-banner-placeholder';
+        placeholder.style.position = 'fixed';
+        placeholder.style.bottom = '0';
+        placeholder.style.left = '50%';
+        placeholder.style.transform = 'translateX(-50%)';
+        placeholder.style.width = '100%';
+        placeholder.style.maxWidth = '400px'; // Typical banner ad width
+        placeholder.style.height = '50px'; // Typical banner ad height
+        placeholder.style.backgroundColor = '#2a2a4e';
+        placeholder.style.color = '#ffffff';
+        placeholder.style.display = 'flex';
+        placeholder.style.alignItems = 'center';
+        placeholder.style.justifyContent = 'center';
+        placeholder.style.fontFamily = '"Fredoka", "Baloo 2", sans-serif';
+        placeholder.style.fontSize = '14px';
+        placeholder.style.zIndex = '9999';
+        placeholder.style.boxShadow = '0 -2px 10px rgba(0,0,0,0.5)';
+        placeholder.innerText = 'AD PLACEHOLDER (AdMob Banner)';
+        document.body.appendChild(placeholder);
+      }
+      placeholder.style.display = 'flex';
+      bannerShowing = true;
       return;
     }
 
@@ -306,10 +423,9 @@ export const AdManager = {
       console.log('[AdManager] Showing banner with ID:', adId);
       await AdMob.showBanner({
         adId: adId,
-        adSize: BannerAdSize.BANNER,
+        adSize: BannerAdSize.ADAPTIVE_BANNER,
         position: BannerAdPosition.BOTTOM_CENTER,
-        margin: 0,
-        isTesting: USE_TEST_IDS,
+        margin: 60 // Push banner up above the hidden immersive navigation bar
       });
       bannerShowing = true;
       console.log('[AdManager] ✅ Banner show request sent');
@@ -321,6 +437,15 @@ export const AdManager = {
 
   async hideBanner() {
     if (!bannerShowing) return;
+
+    if (!this._isNativePlatform()) {
+      const placeholder = document.getElementById('ad-banner-placeholder');
+      if (placeholder) {
+        placeholder.style.display = 'none';
+      }
+      bannerShowing = false;
+      return;
+    }
 
     try {
       await AdMob.hideBanner();
@@ -387,6 +512,65 @@ export const AdManager = {
 
       skipBtn.on('pointerdown', cleanup);
       scene.time.delayedCall(5000, () => { if (this._isShowing) cleanup(); });
+    });
+  },
+
+  _showPlaceholderRewardVideo(scene, onComplete) {
+    this._isShowing = true;
+    const { width, height } = scene.scale;
+
+    const overlay = scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85)
+      .setDepth(200).setInteractive();
+
+    const boxW = width * 0.8, boxH = height * 0.4;
+    const boxX = (width - boxW) / 2, boxY = (height - boxH) / 2;
+
+    const box = scene.add.graphics().setDepth(201);
+    box.fillStyle(0x3a2a4e, 1);
+    box.fillRoundedRect(boxX, boxY, boxW, boxH, 16);
+
+    const adText = scene.add.text(width / 2, height / 2 - 30, 'REWARDED AD PLACEHOLDER', {
+      fontSize: '20px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', color: '#FFD32A'
+    }).setOrigin(0.5).setDepth(202);
+
+    const subText = scene.add.text(width / 2, height / 2 + 10, 'Watch this 5s video to get a reward!', {
+      fontSize: '14px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', color: '#ffffff'
+    }).setOrigin(0.5).setDepth(202);
+
+    let remaining = 5;
+    const timerText = scene.add.text(width / 2, boxY + boxH - 40, `Reward in ${remaining}...`, {
+      fontSize: '16px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', color: '#4ECDC4'
+    }).setOrigin(0.5).setDepth(202);
+
+    const countdown = scene.time.addEvent({
+      delay: 1000, repeat: 4,
+      callback: () => {
+        remaining--;
+        timerText.setText(remaining > 0 ? `Reward in ${remaining}...` : '');
+      }
+    });
+
+    scene.time.delayedCall(5000, () => {
+      const claimBtn = scene.add.text(width / 2, boxY + boxH - 40, 'CLAIM REWARD', {
+        fontSize: '20px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', color: '#FFD32A'
+      }).setOrigin(0.5).setDepth(203).setInteractive({ useHandCursor: true });
+
+      const closeBtn = scene.add.text(width / 2, boxY + boxH - 10, 'Close Video (No Reward)', {
+        fontSize: '12px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', color: '#aaaaaa'
+      }).setOrigin(0.5).setDepth(203).setInteractive({ useHandCursor: true });
+
+      timerText.setVisible(false);
+      countdown.remove();
+
+      const cleanup = (granted) => {
+        overlay.destroy(); box.destroy(); adText.destroy();
+        subText.destroy(); timerText.destroy(); claimBtn.destroy(); closeBtn.destroy();
+        this._isShowing = false;
+        onComplete(granted);
+      };
+
+      claimBtn.on('pointerdown', () => cleanup(true));
+      closeBtn.on('pointerdown', () => cleanup(false));
     });
   }
 };

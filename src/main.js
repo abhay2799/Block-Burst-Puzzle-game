@@ -14,12 +14,26 @@ const config = {
   height: GAME_HEIGHT,
   parent: 'game-container',
   backgroundColor: '#000000',
+  // Maximize resolution for crisp, HD Retina graphics
+  resolution: Math.max(1, window.devicePixelRatio || 1),
+  roundPixels: false, // Enable sub-pixel buttery smooth animations
+  fps: {
+    target: 120, // Allow high refresh rate displays (e.g. 120Hz phones)
+    forceSetTimeOut: false
+  },
+  render: {
+    powerPreference: 'high-performance',
+    antialias: true,      // Restore MSAA for perfectly smooth vector edges
+    antialiasGL: true,    // Restore WebGL smoothing
+    clearBeforeRender: true
+  },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   input: {
     activePointers: 1,
+    smoothFactor: 0, // Removes input trailing/lag for instantaneous dragging
     touch: {
       target: null,
       capture: true
@@ -28,8 +42,12 @@ const config = {
   scene: [BootScene, SplashScene, MenuScene, GameScene, GameOverScene, PauseScene]
 };
 
+import { StatusBar } from '@capacitor/status-bar';
+
 let game;
 document.fonts.ready.then(() => {
+  try { StatusBar.hide(); } catch (e) { console.log('StatusBar not available'); }
+
   game = new Phaser.Game(config);
   AdManager._gameInstance = game;
 

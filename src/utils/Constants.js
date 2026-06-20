@@ -13,17 +13,17 @@ export const PIECE_SCALE_SMALL = 0.55;
 export const PIECE_SCALE_FULL = 1.0;
 export const PIECE_AREA_Y = 880;
 
-export const DRAG_FINGER_OFFSET_Y = -70;
+export const DRAG_FINGER_OFFSET_Y = -180; // Keeps the block well above the thumb for clear visibility
 
 export const COLORS = [
-  0xFF6B35,  // Vivid Orange
-  0x2EC866,  // Bold Green
-  0xFF3B3B,  // Punchy Red
-  0x2B7AFF,  // Electric Blue
-  0xFFC107,  // Bold Yellow
-  0xAA44FF,  // Vivid Purple
-  0x00C9B7,  // Bright Teal
-  0xFF2D7B,  // Hot Pink
+  0xEF7A1D,  // Classic Orange
+  0x60C835,  // Classic Green
+  0xD32431,  // Classic Red
+  0x3275F9,  // Classic Blue
+  0xF4B324,  // Classic Yellow
+  0x9E54E5,  // Classic Purple
+  0x24C3D6,  // Classic Cyan
+  0xE34081,  // Classic Pink
 ];
 
 export const GRID_BG_COLOR = 0x16213e;
@@ -33,13 +33,13 @@ export const HIGHLIGHT_VALID = 0x4ade80;
 export const HIGHLIGHT_INVALID = 0xef4444;
 
 export const TIMING = {
-  FLASH_DURATION: 140,
-  SHRINK_DURATION: 320,
-  SHAKE_DURATION: 220,
-  SCORE_POP_DURATION: 500,
-  COMBO_TEXT_DURATION: 1200,
-  PIECE_RETURN_DURATION: 350,
-  PIECE_PLACE_DURATION: 220,
+  FLASH_DURATION: 120, // Snappier line flash
+  SHRINK_DURATION: 250, // Faster block shrink during clears
+  SHAKE_DURATION: 180, // Tighter camera shake
+  SCORE_POP_DURATION: 400, // Faster text popups
+  COMBO_TEXT_DURATION: 1000, 
+  PIECE_RETURN_DURATION: 200, // Instant snap-back on invalid placement
+  PIECE_PLACE_DURATION: 120, // Near-instant placement
 };
 
 export const SCORING = {

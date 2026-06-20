@@ -89,6 +89,23 @@ export class DifficultyManager {
     return pieces;
   }
 
+  generateRevivePieces() {
+    const pieces = [];
+    let dotShapeIndex = 0;
+    
+    for (let i = 0; i < PARSED_SHAPES.length; i++) {
+      if (PARSED_SHAPES[i].size === 1) {
+        dotShapeIndex = i;
+        break;
+      }
+    }
+
+    for (let i = 0; i < 3; i++) {
+      pieces.push(this._buildPiece(dotShapeIndex));
+    }
+    return pieces;
+  }
+
   analyzeBoard(board) {
     const grid = board.grid;
     const nearlyFullRows = [];

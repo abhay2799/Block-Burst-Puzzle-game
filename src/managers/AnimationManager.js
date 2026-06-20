@@ -168,45 +168,56 @@ export class AnimationManager {
       }
     }
 
-    // NEON GLOW BOUNDING BOXES
-    const glowColor = clearedCells.length > 0 ? COLORS[clearedCells[0].colorIndex] : 0xFF3366;
+    // NEON GLOW BOUNDING BOXES (MATCHING SCREENSHOT)
+    // We'll use a very intense neon color derived from the piece or the blocks
+    const baseColorInt = clearedCells.length > 0 ? COLORS[clearedCells[0].colorIndex] : 0xFF3366;
+    const glowColor = Phaser.Display.Color.IntegerToColor(baseColorInt).lighten(25).color;
     
     if (clears) {
-      for (const r of clears.rows) {
-        const y = GRID_OFFSET_Y + r * cellTotal;
-        const rect = scene.add.graphics().setDepth(18);
-        rect.lineStyle(6, glowColor, 1);
-        rect.strokeRect(GRID_OFFSET_X, y, totalGridSize, CELL_SIZE);
-        rect.setAlpha(0);
-        
-        scene.tweens.add({
-          targets: rect, alpha: 1, scaleX: 1.02, scaleY: 1.05, duration: 150, yoyo: true, hold: 200,
-          onComplete: () => rect.destroy()
-        });
+      const drawBlastRect = (x, y, w, h) => {
+         const neonGfx = scene.add.graphics().setDepth(18).setBlendMode(Phaser.BlendModes.ADD);
+         
+         // Inner bright flash (makes blocks look glowing)
+         neonGfx.fillStyle(glowColor, 0.4);
+         neonGfx.fillRect(x, y, w, h);
+         
+         // Intense outer boundary glow
+         neonGfx.lineStyle(10, glowColor, 0.6);
+         neonGfx.strokeRect(x - 3, y - 3, w + 6, h + 6);
+         
+         // Medium inner boundary
+         neonGfx.lineStyle(6, glowColor, 1);
+         neonGfx.strokeRect(x, y, w, h);
 
-        // Emit hollow squares along the row
-        this.hollowEmitter.setParticleTint(glowColor);
-        for(let c = 0; c < GRID_SIZE; c++) {
-           this.hollowEmitter.emitParticleAt(GRID_OFFSET_X + c * cellTotal + CELL_SIZE/2, y + CELL_SIZE/2, 2);
-        }
+         // Blinding white core
+         neonGfx.lineStyle(3, 0xFFFFFF, 1);
+         neonGfx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+
+         neonGfx.setAlpha(0);
+         scene.tweens.add({
+           targets: neonGfx, alpha: 1, duration: 100, yoyo: true, hold: 150,
+           onComplete: () => neonGfx.destroy()
+         });
+
+         // Emit magical hollow sparks along the bounding box
+         this.hollowEmitter.setParticleTint(glowColor);
+         const isRow = w > h;
+         const limit = isRow ? GRID_SIZE : GRID_SIZE;
+         for(let i = 0; i < limit; i++) {
+             const px = isRow ? x + i * cellTotal + CELL_SIZE/2 : x + CELL_SIZE/2;
+             const py = isRow ? y + CELL_SIZE/2 : y + i * cellTotal + CELL_SIZE/2;
+             this.hollowEmitter.emitParticleAt(px, py, 2);
+             // Also emit a couple of bright stars inside
+             this.starEmitter.setParticleTint(0xFFFFFF);
+             this.starEmitter.emitParticleAt(px + (Math.random()*10-5), py + (Math.random()*10-5), 1);
+         }
+      };
+
+      for (const r of clears.rows) {
+        drawBlastRect(GRID_OFFSET_X, GRID_OFFSET_Y + r * cellTotal, totalGridSize, CELL_SIZE);
       }
       for (const c of clears.cols) {
-        const x = GRID_OFFSET_X + c * cellTotal;
-        const rect = scene.add.graphics().setDepth(18);
-        rect.lineStyle(6, glowColor, 1);
-        rect.strokeRect(x, GRID_OFFSET_Y, CELL_SIZE, totalGridSize);
-        rect.setAlpha(0);
-        
-        scene.tweens.add({
-          targets: rect, alpha: 1, scaleX: 1.05, scaleY: 1.02, duration: 150, yoyo: true, hold: 200,
-          onComplete: () => rect.destroy()
-        });
-
-        // Emit hollow squares along the col
-        this.hollowEmitter.setParticleTint(glowColor);
-        for(let r = 0; r < GRID_SIZE; r++) {
-           this.hollowEmitter.emitParticleAt(x + CELL_SIZE/2, GRID_OFFSET_Y + r * cellTotal + CELL_SIZE/2, 2);
-        }
+        drawBlastRect(GRID_OFFSET_X + c * cellTotal, GRID_OFFSET_Y, CELL_SIZE, totalGridSize);
       }
     }
 
@@ -262,9 +273,11 @@ export class AnimationManager {
         this._flashEdgeGlow(glowColor);
       }
 
-      // Screen shake (Huge impact for combos)
-      const intensity = Math.min(lineCount * 8 + combo * 5, 40);
-      scene.cameras.main.shake(TIMING.SHAKE_DURATION + 100, intensity / 1000);
+      // Screen shake (Huge impact for combos) - REMOVED AT USER REQUEST
+      // const intensity = Math.min(lineCount * 8 + combo * 5, 40);
+      // if (SoundManager.isHapticsEnabled()) {
+      //   scene.cameras.main.shake(120, intensity / 2000);
+      // }
 
       uiManager.showScorePopup(points, clearedCells, combo);
       if (combo >= 1) { uiManager.showComboText(combo, placedCells, glowColor); }

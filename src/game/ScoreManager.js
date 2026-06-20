@@ -4,16 +4,22 @@ export class ScoreManager {
   constructor() {
     this.score = 0;
     this.combo = 0;
+    this.highestCombo = 0;
     this.level = 1;
     this.linesClearedThisLevel = 0;
+    this.totalLinesCleared = 0;
+    this.totalBlocksPlaced = 0;
     this.highScore = this.loadHighScore();
   }
 
   reset() {
     this.score = 0;
     this.combo = 0;
+    this.highestCombo = 0;
     this.level = 1;
     this.linesClearedThisLevel = 0;
+    this.totalLinesCleared = 0;
+    this.totalBlocksPlaced = 0;
   }
 
   getLevel() {
@@ -28,10 +34,12 @@ export class ScoreManager {
 
   addLinesCleared(lines) {
     this.linesClearedThisLevel += lines;
+    this.totalLinesCleared += lines;
     return this.linesClearedThisLevel;
   }
 
   addPlacementPoints(cellCount) {
+    this.totalBlocksPlaced += cellCount;
     const points = cellCount * SCORING.PLACEMENT_PER_CELL;
     this.score += points;
     return points;
@@ -44,6 +52,9 @@ export class ScoreManager {
     }
 
     this.combo++;
+    if (this.combo > this.highestCombo) {
+      this.highestCombo = this.combo;
+    }
 
     // Base points for lines cleared
     let points = lineCount * SCORING.LINE_CLEAR_BASE;

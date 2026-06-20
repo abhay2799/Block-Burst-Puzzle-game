@@ -23,6 +23,7 @@ export class GameScene extends Phaser.Scene {
 
   init(data) {
     this.initialScore = data?.score || 0;
+    this.reviveData = data?.reviveData || null;
   }
 
   create() {
@@ -56,7 +57,13 @@ export class GameScene extends Phaser.Scene {
 
     if (VISUAL_SETTINGS.parallaxBackground) this._createParallaxShapes();
 
-    this._checkSavedGame();
+    AdManager.initialize().then(() => { AdManager.showBanner(); });
+
+    if (this.reviveData) {
+      this._revivePlayer();
+    } else {
+      this._checkSavedGame();
+    }
 
     this.input.enabled = true;
     SoundManager.init(this);
@@ -89,7 +96,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: overlay, alpha: 1, duration: 200, ease: 'Sine.easeOut' });
 
     const cardContainer = this.add.container(cx, cy + 60).setDepth(201).setAlpha(0);
-    const cardW = 320, cardH = 280;
+    const cardW = 320, cardH = 220;
 
     const cardOuter = this.add.graphics();
     cardOuter.fillStyle(0x4477CC, 0.3);
@@ -108,36 +115,8 @@ export class GameScene extends Phaser.Scene {
     glowLine.fillRoundedRect(-cardW / 2 + 15, -cardH / 2 + 6, cardW - 30, 3, 2);
     cardContainer.add(glowLine);
 
-    const iconBg = this.add.graphics();
-    iconBg.fillStyle(0x2B7AFF, 0.15);
-    iconBg.fillCircle(0, -cardH / 2 + 55, 28);
-    iconBg.lineStyle(2, 0x2B7AFF, 0.4);
-    iconBg.strokeCircle(0, -cardH / 2 + 55, 28);
-    cardContainer.add(iconBg);
-
-    const icon = this.add.text(0, -cardH / 2 + 55, '💾', { fontSize: '28px' }).setOrigin(0.5);
-    cardContainer.add(icon);
-
-    const titleText = this.add.text(0, -cardH / 2 + 100, 'Saved Game Found', {
-      fontSize: '22px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-      fontStyle: 'bold', color: '#ffffff',
-      shadow: { offsetX: 0, offsetY: 1, color: '#000000', blur: 2, fill: true }
-    }).setOrigin(0.5);
-    cardContainer.add(titleText);
-
-    const scoreBg = this.add.graphics();
-    scoreBg.fillStyle(0x0F1838, 0.6);
-    scoreBg.fillRoundedRect(-80, -cardH / 2 + 120, 160, 36, 18);
-    cardContainer.add(scoreBg);
-
-    const scoreText = this.add.text(0, -cardH / 2 + 138, `⭐  ${(state.score ?? 0).toLocaleString()}  points`, {
-      fontSize: '15px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-      fontStyle: 'bold', color: '#FFD93D'
-    }).setOrigin(0.5);
-    cardContainer.add(scoreText);
-
-    const btnStartY = 16;
-    const btnSpacing = 64;
+    const btnStartY = -40;
+    const btnSpacing = 80;
 
     const cleanup = () => {
       this.tweens.add({
@@ -224,6 +203,65 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  _revivePlayer() {
+    // KILL the background Game Over explosion if it's still waiting or running!
+    this.tweens.killAll();
+    this.time.removeAllEvents();
+    
+    this.input.enabled = true;
+    const state = this.reviveData.scoreManagerState;
+    
+    this.board.grid = this.reviveData.boardGrid;
+    this.turnsPlayed = this.reviveData.turnsPlayed;
+    
+    this.scoreManager.score = state.score;
+    this.scoreManager.combo = state.combo;
+    this.scoreManager.highestCombo = state.highestCombo;
+    this.scoreManager.level = state.level;
+    this.scoreManager.linesClearedThisLevel = state.linesClearedThisLevel;
+    this.scoreManager.totalLinesCleared = state.totalLinesCleared;
+    this.scoreManager.totalBlocksPlaced = state.totalBlocksPlaced;
+
+    this.uiManager.updateScoreDisplay(false);
+    this.visualProgression.update(this.scoreManager.level);
+
+    // Completely destroy old block sprites to prevent overlapping rendering lag!
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        const oldSprite = this.gridRenderer.getBlockSprite(r, c);
+        if (oldSprite) {
+          oldSprite.destroy();
+          this.gridRenderer.setBlockSprite(r, c, null);
+        }
+      }
+    }
+
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        if (this.board.grid[r][c] !== null) {
+          const colorIndex = this.board.grid[r][c];
+          const x = GRID_OFFSET_X + c * (CELL_SIZE + GRID_PADDING);
+          const y = GRID_OFFSET_Y + r * (CELL_SIZE + GRID_PADDING);
+          const sprite = this.add.image(x, y, `block_${colorIndex}`).setOrigin(0).setDepth(2);
+          this.gridRenderer.setBlockSprite(r, c, sprite);
+        }
+      }
+    }
+
+    this.currentPieces = this.difficultyManager.generateRevivePieces();
+    const spacing = GAME_WIDTH / 3;
+    for (let i = 0; i < 3; i++) {
+      this.createDraggablePiece(i, spacing * i + spacing / 2, PIECE_AREA_Y);
+    }
+    
+    SoundManager.newTurn();
+    
+    // Slight delay so the UI is ready
+    this.time.delayedCall(500, () => {
+      this.uiManager.showMotivation("REVIVED!");
+    });
+  }
+
   _restoreState(state) {
     if (!Array.isArray(state.board) || state.board.length !== GRID_SIZE) {
       this.spawnNewPieces();
@@ -239,7 +277,7 @@ export class GameScene extends Phaser.Scene {
     this.scoreManager.setScore(state.score ?? 0);
     this.turnsPlayed = state.turnsPlayed || 0;
     this.uiManager.updateScoreDisplay(false);
-    this.visualProgression.update(state.score ?? 0);
+    this.visualProgression.update(this.scoreManager.level);
 
     for (let r = 0; r < GRID_SIZE; r++) {
       for (let c = 0; c < GRID_SIZE; c++) {
@@ -281,7 +319,7 @@ export class GameScene extends Phaser.Scene {
   createBackground() {
     this.bgBase = this.add.graphics().setDepth(-10);
     this.currentBgStage = -1;
-    this.visualProgression.update(0);
+    this.visualProgression.update(this.scoreManager.level);
   }
 
   _createPieceTray() {
@@ -290,17 +328,22 @@ export class GameScene extends Phaser.Scene {
     const trayH = 130;
     const trayX = 20;
     const trayY = PIECE_AREA_Y - 65;
-    // Outer shadow
-    tray.fillStyle(0x000000, 0.4);
-    tray.fillRoundedRect(trayX, trayY + 4, trayW, trayH, 16);
-
-    // Glass base
-    tray.fillStyle(0xffffff, 0.08);
-    tray.fillRoundedRect(trayX, trayY, trayW, trayH, 16);
     
-    // Glass highlight stroke
-    tray.lineStyle(1.5, 0xffffff, 0.2);
-    tray.strokeRoundedRect(trayX, trayY, trayW, trayH, 16);
+    // Deep shadow base
+    tray.fillStyle(0x050A1A, 0.6);
+    tray.fillRoundedRect(trayX, trayY + 8, trayW, trayH, 24);
+
+    // Vibrant Glass base
+    tray.fillStyle(0x2B5BDE, 0.15); 
+    tray.fillRoundedRect(trayX, trayY, trayW, trayH, 20);
+    
+    // Glowing outer stroke
+    tray.lineStyle(2, 0x44AAFF, 0.5);
+    tray.strokeRoundedRect(trayX, trayY, trayW, trayH, 20);
+
+    // Sharp inner highlight
+    tray.lineStyle(1, 0xFFFFFF, 0.25);
+    tray.strokeRoundedRect(trayX + 2, trayY + 2, trayW - 4, trayH - 4, 18);
   }
 
   _createParallaxShapes() {
@@ -394,7 +437,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     container.setSize(piece.width * cellSize + 20, piece.height * cellSize + 20);
-    container.setInteractive({ draggable: true, useHandCursor: true });
+    container.setInteractive({ draggable: true });
     container.pieceIndex = index;
     container.originalX = x;
     container.originalY = y;
@@ -454,7 +497,7 @@ export class GameScene extends Phaser.Scene {
       this.uiManager.triggerNewHighScore();
       this.animManager.triggerNewHighScore();
     }
-    this.visualProgression.update(this.scoreManager.getScore());
+    this.visualProgression.update(this.scoreManager.level);
 
     for (const cell of placedCells) {
       const x = GRID_OFFSET_X + cell.col * (CELL_SIZE + GRID_PADDING);
@@ -465,9 +508,9 @@ export class GameScene extends Phaser.Scene {
       this.tweens.chain({
         targets: sprite,
         tweens: [
-          { scaleX: 1.12, scaleY: 0.88, alpha: 1, duration: 80, ease: 'Quad.easeOut' },
-          { scaleX: 0.94, scaleY: 1.06, duration: 60, ease: 'Quad.easeInOut' },
-          { scaleX: 1, scaleY: 1, duration: 100, ease: 'Back.easeOut' },
+          { scaleX: 1.15, scaleY: 0.85, alpha: 1, duration: 40, ease: 'Quad.easeOut' },
+          { scaleX: 0.95, scaleY: 1.05, duration: 40, ease: 'Quad.easeInOut' },
+          { scaleX: 1, scaleY: 1, duration: 60, ease: 'Back.easeOut' },
         ]
       });
 
@@ -556,17 +599,38 @@ export class GameScene extends Phaser.Scene {
 
     try { localStorage.removeItem('blockblast_saved_game'); } catch (e) {}
 
-    const toastY = PIECE_AREA_Y + 10;
-    const toastBg = this.add.graphics().setDepth(100);
-    toastBg.fillStyle(0x1a1a3e, 0.85);
-    toastBg.fillRoundedRect(GAME_WIDTH / 2 - 120, toastY - 18, 240, 36, 18);
-    const toastText = this.add.text(GAME_WIDTH / 2, toastY, 'No Space Left', {
-      fontSize: '15px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-      fontStyle: 'bold', color: '#ffffff'
-    }).setOrigin(0.5).setDepth(101);
+    const toastY = GAME_HEIGHT / 2 - 50;
+    
+    const toastContainer = this.add.container(GAME_WIDTH / 2, toastY).setDepth(100).setScale(0);
+    
+    // Vibrant Red Badge Background
+    const toastBg = this.add.graphics();
+    toastBg.fillStyle(0xE62222, 0.95);
+    toastBg.fillRoundedRect(-140, -35, 280, 70, 35);
+    toastBg.lineStyle(4, 0xFFFFFF, 1);
+    toastBg.strokeRoundedRect(-140, -35, 280, 70, 35);
+    toastContainer.add(toastBg);
+    
+    // Bold White Text
+    const toastText = this.add.text(0, 0, 'NO SPACE LEFT!', {
+      fontSize: '28px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+      fontStyle: '900', color: '#FFFFFF',
+      shadow: { offsetX: 0, offsetY: 3, color: '#660000', blur: 0, fill: true }
+    }).setOrigin(0.5);
+    toastContainer.add(toastText);
 
-    this.time.delayedCall(1500, () => {
-      this.tweens.add({ targets: [toastBg, toastText], alpha: 0, duration: 300 });
+    // Punchy pop-in animation synced with sound
+    this.tweens.chain({
+      targets: toastContainer,
+      tweens: [
+        { scaleX: 1.1, scaleY: 1.1, duration: 500, ease: 'Back.easeOut' },
+        { scaleX: 1, scaleY: 1, duration: 300, ease: 'Power2' }
+      ]
+    });
+    
+    // Give player more time to read it before exploding
+    this.time.delayedCall(2500, () => {
+      this.tweens.add({ targets: toastContainer, alpha: 0, scaleX: 0.5, scaleY: 0.5, duration: 400, ease: 'Back.easeIn' });
 
       const cellTotal = CELL_SIZE + GRID_PADDING;
       const totalGridSize = GRID_SIZE * cellTotal - GRID_PADDING;
@@ -624,20 +688,28 @@ export class GameScene extends Phaser.Scene {
     const gameOverData = {
       score: this.scoreManager.getScore(),
       highScore: this.scoreManager.getHighScore(),
-      isNewHighScore: this.newHighScoreTriggered
+      isNewHighScore: this.newHighScoreTriggered,
+      linesCleared: this.scoreManager.totalLinesCleared,
+      blocksPlaced: this.scoreManager.totalBlocksPlaced,
+      highestCombo: this.scoreManager.highestCombo,
+      boardGrid: JSON.parse(JSON.stringify(this.board.grid)),
+      turnsPlayed: this.turnsPlayed,
+      scoreManagerState: {
+        score: this.scoreManager.score,
+        combo: this.scoreManager.combo,
+        highestCombo: this.scoreManager.highestCombo,
+        level: this.scoreManager.level,
+        linesClearedThisLevel: this.scoreManager.linesClearedThisLevel,
+        totalLinesCleared: this.scoreManager.totalLinesCleared,
+        totalBlocksPlaced: this.scoreManager.totalBlocksPlaced
+      }
     };
 
-    if (AdManager.shouldShowGameOverAd()) {
-      AdManager.showInterstitial(this, () => {
+    this.cameras.main.fade(400, 0, 0, 0, false, (cam, progress) => {
+      if (progress >= 1) {
         this.scene.start('GameOverScene', gameOverData);
-      });
-    } else {
-      this.cameras.main.fade(400, 0, 0, 0, false, (cam, progress) => {
-        if (progress >= 1) {
-          this.scene.start('GameOverScene', gameOverData);
-        }
-      });
-    }
+      }
+    });
   }
 
   _onResume() {

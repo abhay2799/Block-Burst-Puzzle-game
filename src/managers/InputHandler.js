@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {
   GRID_SIZE, CELL_SIZE, GRID_PADDING, GRID_OFFSET_X, GRID_OFFSET_Y,
-  PIECE_SCALE_SMALL, DRAG_FINGER_OFFSET_Y, TIMING, VISUAL_SETTINGS
+  PIECE_SCALE_SMALL, DRAG_FINGER_OFFSET_Y, TIMING, VISUAL_SETTINGS, COLORS
 } from '../utils/Constants.js';
 import { SoundManager } from '../audio/SoundManager.js';
 import { ObjectPool } from '../utils/ObjectPool.js';
@@ -61,8 +61,8 @@ export class InputHandler {
         y: targetY,
         scaleX: 1,
         scaleY: 1,
-        duration: 180,
-        ease: 'Back.easeOut'
+        duration: 90, // Blazing fast pickup snap
+        ease: 'Cubic.easeOut' // Smoother, faster curve than Back for ultra-responsiveness
       });
       i++;
     }
@@ -91,7 +91,13 @@ export class InputHandler {
 
   onDrag(container, pointer, index, pieces, board) {
     if (this.scene.isAnimating || !container._isBeingDragged) return;
+    
+    // Visually update piece position instantly every frame for buttery smoothness
     container.setPosition(pointer.x, pointer.y);
+
+    // Always recalculate exact grid position instantly for zero-latency dragging
+    this._lastCalcX = pointer.x;
+    this._lastCalcY = pointer.y;
 
     const piece = pieces[index];
     const gridPos = this.getGridPosition(pointer.x, pointer.y, piece);
@@ -118,7 +124,7 @@ export class InputHandler {
       this.showGhost(piece, displayPos.row, displayPos.col, true);
       const prediction = board.predictClears(piece, displayPos.row, displayPos.col);
       if (prediction.rows.length > 0 || prediction.cols.length > 0) {
-        this.showPrediction(prediction);
+        this.showPrediction(prediction, piece);
       }
     }
 
@@ -306,103 +312,96 @@ export class InputHandler {
     }
   }
 
-  showPrediction(prediction) {
+  showPrediction(prediction, piece) {
     const scene = this.scene;
     const cellTotal = CELL_SIZE + GRID_PADDING;
+    const totalW = GRID_SIZE * cellTotal - GRID_PADDING;
 
+    // Determine the glow color (use the piece's color, or a rainbow/bright default)
+    let glowColorInt = 0xFFFFFF;
+    if (piece && typeof piece.colorIndex !== 'undefined' && COLORS[piece.colorIndex]) {
+        glowColorInt = COLORS[piece.colorIndex];
+    }
+    const glowColor = Phaser.Display.Color.IntegerToColor(glowColorInt).lighten(20).color;
+
+    // Add a single graphics object for all the glowing boxes
+    const neonGfx = scene.add.graphics().setDepth(15).setBlendMode(Phaser.BlendModes.ADD);
+    this.predictionSprites.push(neonGfx);
+
+    const drawNeonRect = (x, y, w, h) => {
+        // Inner translucent fill
+        neonGfx.fillStyle(glowColor, 0.25);
+        neonGfx.fillRect(x, y, w, h);
+        
+        // Intense glow outer border
+        neonGfx.lineStyle(8, glowColor, 0.4);
+        neonGfx.strokeRect(x - 2, y - 2, w + 4, h + 4);
+        
+        // Medium inner border
+        neonGfx.lineStyle(4, glowColor, 0.9);
+        neonGfx.strokeRect(x, y, w, h);
+        
+        // Core bright white stroke
+        neonGfx.lineStyle(2, 0xFFFFFF, 1);
+        neonGfx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    };
+
+    // Draw all rows and cols
     for (const r of prediction.rows) {
-      for (let c = 0; c < GRID_SIZE; c++) {
-        const x = GRID_OFFSET_X + c * cellTotal;
-        const y = GRID_OFFSET_Y + r * cellTotal;
-        const highlight = scene.add.graphics().setDepth(4);
-        highlight.fillStyle(0xFFD32A, 0.25);
-        highlight.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
-        highlight.lineStyle(2, 0xFFD32A, 0.7);
-        highlight.strokeRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 5);
-        this.predictionSprites.push(highlight);
-
-        const tw = scene.tweens.add({
-          targets: highlight, alpha: 0.3,
-          duration: 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
-        });
-        this.predictionTweens.push(tw);
-      }
-      const arrowY = GRID_OFFSET_Y + r * cellTotal + CELL_SIZE / 2;
-      const arrow = scene.add.text(GRID_OFFSET_X - 18, arrowY, '▶', {
-        fontSize: '14px', color: '#FFD32A'
-      }).setOrigin(0.5).setDepth(4);
-      this.predictionSprites.push(arrow);
-      const arrowTw = scene.tweens.add({
-        targets: arrow, x: GRID_OFFSET_X - 12,
-        duration: 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
-      });
-      this.predictionTweens.push(arrowTw);
+      const y = GRID_OFFSET_Y + r * cellTotal;
+      drawNeonRect(GRID_OFFSET_X, y, totalW, CELL_SIZE);
     }
-
     for (const c of prediction.cols) {
-      for (let r = 0; r < GRID_SIZE; r++) {
-        const x = GRID_OFFSET_X + c * cellTotal;
-        const y = GRID_OFFSET_Y + r * cellTotal;
-        const highlight = scene.add.graphics().setDepth(4);
-        highlight.fillStyle(0x00D2D3, 0.25);
-        highlight.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
-        highlight.lineStyle(2, 0x00D2D3, 0.7);
-        highlight.strokeRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 5);
-        this.predictionSprites.push(highlight);
-
-        const tw = scene.tweens.add({
-          targets: highlight, alpha: 0.3,
-          duration: 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
-        });
-        this.predictionTweens.push(tw);
-      }
-      const arrowX = GRID_OFFSET_X + c * cellTotal + CELL_SIZE / 2;
-      const arrow = scene.add.text(arrowX, GRID_OFFSET_Y - 16, '▼', {
-        fontSize: '14px', color: '#00D2D3'
-      }).setOrigin(0.5).setDepth(4);
-      this.predictionSprites.push(arrow);
-      const arrowTw = scene.tweens.add({
-        targets: arrow, y: GRID_OFFSET_Y - 10,
-        duration: 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
-      });
-      this.predictionTweens.push(arrowTw);
+      const x = GRID_OFFSET_X + c * cellTotal;
+      drawNeonRect(x, GRID_OFFSET_Y, CELL_SIZE, totalW);
     }
 
-    if (prediction.rows.length > 0 || prediction.cols.length > 0) {
-      this._createShimmerWave(prediction, cellTotal);
-    }
+    // Pulse the neon glow
+    const tw = scene.tweens.add({
+      targets: neonGfx, alpha: 0.6,
+      duration: 350, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+    });
+    this.predictionTweens.push(tw);
   }
 
-  _createShimmerWave(prediction, cellTotal) {
+  _createNeonSparkles(prediction, color, totalW, cellTotal) {
     const scene = this.scene;
-    const totalGridSize = GRID_SIZE * cellTotal - GRID_PADDING;
+    
+    // Function to spawn a tiny drifting star
+    const spawnStar = (x, y) => {
+      const star = scene.add.rectangle(x, y, 4, 4, color).setDepth(16).setBlendMode(Phaser.BlendModes.ADD);
+      this.predictionSprites.push(star);
+      
+      const tw = scene.tweens.add({
+        targets: star,
+        y: y - 15 - Math.random() * 20,
+        alpha: 0,
+        scale: 0,
+        duration: 500 + Math.random() * 500,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          if (this.predictionSprites.includes(star)) {
+             star.destroy();
+          }
+        }
+      });
+      this.predictionTweens.push(tw);
+    };
 
+    // Distribute stars randomly along the clears
     for (const r of prediction.rows) {
-      const shimmer = scene.add.graphics().setDepth(5).setAlpha(0.4);
-      shimmer.fillStyle(0xFFFFFF, 0.6);
-      shimmer.fillRect(0, 0, 20, CELL_SIZE);
-      const shimmerY = GRID_OFFSET_Y + r * cellTotal;
-      shimmer.setPosition(GRID_OFFSET_X - 20, shimmerY);
-      this.predictionSprites.push(shimmer);
-      const tw = scene.tweens.add({
-        targets: shimmer, x: GRID_OFFSET_X + totalGridSize,
-        duration: 600, repeat: -1, ease: 'Linear'
-      });
-      this.predictionTweens.push(tw);
+      for (let i = 0; i < 6; i++) {
+        const x = GRID_OFFSET_X + Math.random() * totalW;
+        const y = GRID_OFFSET_Y + r * cellTotal + Math.random() * CELL_SIZE;
+        spawnStar(x, y);
+      }
     }
-
     for (const c of prediction.cols) {
-      const shimmer = scene.add.graphics().setDepth(5).setAlpha(0.4);
-      shimmer.fillStyle(0xFFFFFF, 0.6);
-      shimmer.fillRect(0, 0, CELL_SIZE, 20);
-      const shimmerX = GRID_OFFSET_X + c * cellTotal;
-      shimmer.setPosition(shimmerX, GRID_OFFSET_Y - 20);
-      this.predictionSprites.push(shimmer);
-      const tw = scene.tweens.add({
-        targets: shimmer, y: GRID_OFFSET_Y + totalGridSize,
-        duration: 600, repeat: -1, ease: 'Linear'
-      });
-      this.predictionTweens.push(tw);
+      for (let i = 0; i < 6; i++) {
+        const x = GRID_OFFSET_X + c * cellTotal + Math.random() * CELL_SIZE;
+        const y = GRID_OFFSET_Y + Math.random() * totalW;
+        spawnStar(x, y);
+      }
     }
   }
 

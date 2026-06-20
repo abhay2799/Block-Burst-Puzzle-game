@@ -1,65 +1,8 @@
-const STAGES = [
-  {
-    name: 'deep_ocean',
-    minScore: 0,
-    bgGradient: { top: 0x1A2744, bottom: 0x0D1B2A },
-    borderGlowColor: 0x88CCFF,
-    borderGlowIntensity: 0.5,
-    dotWaveSpeed: 1.0,
-    ambientParticleCount: 3,
-    ambientColors: [0x4488FF, 0x00FFAA],
-    uiAccentColor: 0x88CCFF,
-    saturationMultiplier: 0.8,
-  },
-  {
-    name: 'nebula',
-    minScore: 500,
-    bgGradient: { top: 0x1E3050, bottom: 0x12223A },
-    borderGlowColor: 0x44AAFF,
-    borderGlowIntensity: 0.45,
-    dotWaveSpeed: 1.4,
-    ambientParticleCount: 6,
-    ambientColors: [0x44AAFF, 0x8866FF, 0x00CCFF],
-    uiAccentColor: 0x44AAFF,
-    saturationMultiplier: 0.9,
-  },
-  {
-    name: 'aurora',
-    minScore: 1500,
-    bgGradient: { top: 0x232B52, bottom: 0x161C40 },
-    borderGlowColor: 0xAA66FF,
-    borderGlowIntensity: 0.6,
-    dotWaveSpeed: 1.8,
-    ambientParticleCount: 9,
-    ambientColors: [0xAA66FF, 0xFF66AA, 0x6644FF],
-    uiAccentColor: 0xAA66FF,
-    saturationMultiplier: 1.0,
-  },
-  {
-    name: 'supernova',
-    minScore: 3000,
-    bgGradient: { top: 0x2A1E4A, bottom: 0x150E2A },
-    borderGlowColor: 0xFF6644,
-    borderGlowIntensity: 0.8,
-    dotWaveSpeed: 2.3,
-    ambientParticleCount: 12,
-    ambientColors: [0xFF6644, 0xFFAA00, 0xFF4488],
-    uiAccentColor: 0xFF6644,
-    saturationMultiplier: 1.15,
-  },
-  {
-    name: 'void',
-    minScore: 5000,
-    bgGradient: { top: 0x321A3E, bottom: 0x1A0C22 },
-    borderGlowColor: 0xFFDD00,
-    borderGlowIntensity: 1.0,
-    dotWaveSpeed: 3.0,
-    ambientParticleCount: 15,
-    ambientColors: [0xFFDD00, 0xFFFFFF, 0xFF44FF, 0xFF6600],
-    uiAccentColor: 0xFFDD00,
-    saturationMultiplier: 1.3,
-  },
-];
+import Phaser from 'phaser';
+
+// Distinct hue sequence across the 360 degree color wheel (in 30-degree increments)
+// Arranged to ensure adjacent levels have contrasting colors.
+const DISTINCT_HUES = [210, 330, 150, 30, 270, 90, 300, 180, 0, 240, 60, 120];
 
 export class VisualProgressionManager {
   constructor(scene) {
@@ -69,7 +12,7 @@ export class VisualProgressionManager {
     this._transitionTween = null;
   }
 
-  update(score) {
+  update(score) { // score is actually the level passed from GameScene.js
     const newStage = this._calcStage(score);
     if (newStage !== this.currentStage || !this._initialized) {
       this._transitionTo(newStage, !this._initialized);
@@ -79,23 +22,42 @@ export class VisualProgressionManager {
   }
 
   getParams() {
-    return { stage: this.currentStage, ...STAGES[this.currentStage] };
+    return { stage: this.currentStage, ...this.getStageConfig(this.currentStage) };
   }
 
   getStageConfig(stageIndex) {
-    return STAGES[stageIndex] || STAGES[0];
+    const hueDeg = DISTINCT_HUES[stageIndex % DISTINCT_HUES.length];
+    const baseHue = hueDeg / 360;
+
+    // Use a rich dark-to-light gradient (dark bottom, lighter top)
+    const topColor = Phaser.Display.Color.HSLToColor(baseHue, 0.8, 0.28).color;
+    const bottomColor = Phaser.Display.Color.HSLToColor(baseHue, 0.9, 0.08).color;
+    const accentColor = Phaser.Display.Color.HSLToColor(baseHue, 1.0, 0.65).color;
+    
+    // Analogous colors for particles
+    const particle1 = Phaser.Display.Color.HSLToColor((baseHue + 0.08) % 1, 1.0, 0.75).color;
+    const particle2 = Phaser.Display.Color.HSLToColor((baseHue + 0.92) % 1, 1.0, 0.75).color;
+
+    return {
+      name: `dynamic_hue_${hueDeg}`,
+      minScore: 0,
+      bgGradient: { top: topColor, bottom: bottomColor },
+      borderGlowColor: accentColor,
+      borderGlowIntensity: 0.5 + (stageIndex % 5) * 0.1,
+      dotWaveSpeed: 1.0 + (stageIndex % 5) * 0.3,
+      ambientParticleCount: 12 + (stageIndex % 10),
+      ambientColors: [accentColor, particle1, particle2, 0xFFFFFF],
+      uiAccentColor: accentColor,
+      saturationMultiplier: 1.0
+    };
   }
 
-  _calcStage(score) {
-    for (let i = STAGES.length - 1; i >= 0; i--) {
-      if (score >= STAGES[i].minScore) return i;
-    }
-    return 0;
+  _calcStage(level) {
+    return Math.max(0, level - 1);
   }
 
   _transitionTo(newStage, isInitial) {
-    const scene = this.scene;
-    const config = STAGES[newStage];
+    const config = this.getStageConfig(newStage);
 
     this._animateBackground(config);
     this._updateBorderGlow(config);

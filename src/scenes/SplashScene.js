@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/Constants.js';
+import { SoundManager } from '../audio/SoundManager.js';
 
 export class SplashScene extends Phaser.Scene {
   constructor() {
@@ -10,85 +11,71 @@ export class SplashScene extends Phaser.Scene {
     this.events.once('shutdown', () => this.shutdown());
     this.cameras.main.setBackgroundColor(0x000000);
 
-    const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 1);
-    bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    // Initialize SoundManager for the game globally on first load
+    SoundManager.init(this);
 
-    // Floating particle background
-    this._createParticleField();
+    const W = GAME_WIDTH;
+    const H = GAME_HEIGHT;
+    const cx = W / 2;
+    const cy = H / 2;
+    // Solid black background
+    this.add.rectangle(0, 0, W, H, 0x000000).setOrigin(0, 0);
 
-    const cx = GAME_WIDTH / 2;
-    const cy = GAME_HEIGHT / 2 - 20;
+    // Initial positions for a very subtle slide-up reveal
+    const nameTargetY = cy - 20;
+    const studioTargetY = cy + 30;
 
-    const glow = this.add.graphics().setDepth(0).setAlpha(0);
-    glow.fillStyle(0xffffff, 0.05);
-    glow.fillCircle(cx, cy, 180);
-    glow.fillStyle(0xffffff, 0.04);
-    glow.fillCircle(cx, cy, 130);
-    glow.fillStyle(0xffffff, 0.03);
-    glow.fillCircle(cx, cy, 220);
+    // Force QHD font rendering by drawing text at 2.5x size and scaling it down visually
+    const name = this.add.text(cx, nameTargetY + 15, 'DEVLANCE', {
+      fontSize: '120px', fontFamily: '"Arial Black", Impact, sans-serif',
+      fontStyle: '900', color: '#ffffff', align: 'center'
+    }).setOrigin(0.5, 0.5).setLetterSpacing(15).setScale(0.4).setAlpha(0); 
 
-    const name = this.add.text(cx, cy - 8, 'DEVLANCE', {
-      fontSize: '44px', fontFamily: 'Arial Black, Impact, Arial',
-      fontStyle: 'bold', color: '#ffffff', align: 'center',
-      stroke: '#000000', strokeThickness: 1
-    }).setOrigin(0.5).setDepth(2).setAlpha(0);
+    const studio = this.add.text(cx, studioTargetY + 10, 'STUDIO', {
+      fontSize: '50px', fontFamily: '"Arial", Helvetica, sans-serif',
+      fontStyle: 'bold', color: '#888888', align: 'center'
+    }).setOrigin(0.5, 0.5).setLetterSpacing(50).setScale(0.4).setAlpha(0);
 
-    const studio = this.add.text(cx, cy + 32, 'S T U D I O', {
-      fontSize: '16px', fontFamily: 'Arial, Helvetica',
-      letterSpacing: 8, color: '#cccccc', align: 'center'
-    }).setOrigin(0.5).setDepth(2).setAlpha(0);
+    // The signature yellow line
+    const divider = this.add.rectangle(cx, cy + 4, 240, 2, 0xFFB300).setOrigin(0.5, 0.5).setScale(0, 1);
 
-    const lineW = 140;
-    const lineY = cy + 55;
-    const accent = this.add.graphics().setDepth(1).setAlpha(0);
-    accent.fillStyle(0xd4af37, 1);
-    accent.fillRect(cx - lineW / 2, lineY, lineW, 2);
-    accent.fillStyle(0xd4af37, 0.4);
-    accent.fillRect(cx - lineW / 2 - 3, lineY - 1, lineW + 6, 4);
-
-    this.tweens.add({ targets: glow, alpha: 1, duration: 400, ease: 'Sine.easeIn' });
-    this.tweens.add({ targets: name, alpha: 1, duration: 600, delay: 200, ease: 'Sine.easeOut' });
-    this.tweens.add({ targets: studio, alpha: 1, duration: 500, delay: 400, ease: 'Sine.easeOut' });
-    this.tweens.add({ targets: accent, alpha: 1, duration: 400, delay: 600, ease: 'Power2' });
-
-    // Shortened to 2 seconds for first-time users
-    this.time.delayedCall(2000, () => {
+    const container = this.add.container(0, 0, [name, studio, divider]);
+    
+    // Smooth cinematic animation
+    this.time.delayedCall(300, () => {
+      // Step 1: Smoothly stretch the yellow line
       this.tweens.add({
-        targets: [glow, name, studio, accent],
-        alpha: 0, duration: 500, ease: 'Sine.easeIn',
+        targets: divider,
+        scaleX: 1,
+        duration: 800,
+        ease: 'Expo.easeOut',
+        onComplete: () => {
+          // Step 2: Smooth fade-in and slide-apart of the text
+          this.tweens.add({
+            targets: [name, studio],
+            y: (target) => target === name ? nameTargetY : studioTargetY,
+            alpha: 1,
+            duration: 1000,
+            ease: 'Cubic.easeOut'
+          });
+
+          // Step 3: Very slow, premium cinematic zoom using the hardware camera
+          // This avoids the subpixel text jitter caused by scaling a container
+          this.cameras.main.zoomTo(1.05, 2500, 'Sine.easeOut');
+        }
+      });
+    });
+
+    // Fade out to black smoothly before transition
+    this.time.delayedCall(3000, () => {
+      this.tweens.add({
+        targets: container,
+        alpha: 0, 
+        duration: 800, 
+        ease: 'Sine.easeInOut',
         onComplete: () => this.scene.start('MenuScene')
       });
     });
-  }
-
-  _createParticleField() {
-    for (let i = 0; i < 15; i++) {
-      const dot = this.add.graphics().setDepth(0);
-      dot.fillStyle(0xffffff, Phaser.Math.FloatBetween(0.03, 0.12));
-      dot.fillCircle(0, 0, Phaser.Math.Between(1, 4));
-      dot.setPosition(
-        Phaser.Math.Between(20, GAME_WIDTH - 20),
-        Phaser.Math.Between(20, GAME_HEIGHT - 20)
-      );
-
-      this.tweens.add({
-        targets: dot,
-        y: dot.y - Phaser.Math.Between(20, 60),
-        x: dot.x + Phaser.Math.Between(-15, 15),
-        alpha: 0,
-        duration: Phaser.Math.Between(3000, 6000),
-        delay: Phaser.Math.Between(0, 1500),
-        repeat: -1,
-        onRepeat: () => {
-          dot.setPosition(
-            Phaser.Math.Between(20, GAME_WIDTH - 20),
-            Phaser.Math.Between(GAME_HEIGHT * 0.5, GAME_HEIGHT)
-          );
-          dot.setAlpha(Phaser.Math.FloatBetween(0.03, 0.12));
-        }
-      });
-    }
   }
 
   shutdown() {

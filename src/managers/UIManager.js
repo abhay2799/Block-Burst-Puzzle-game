@@ -4,6 +4,7 @@ import {
   GAME_WIDTH, GAME_HEIGHT, TIMING, SCORING
 } from '../utils/Constants.js';
 import { SoundManager } from '../audio/SoundManager.js';
+import { ButtonFactory } from '../ui/ButtonFactory.js';
 
 export class UIManager {
   constructor(scene) {
@@ -21,29 +22,100 @@ export class UIManager {
   _createMainUI() {
     const scene = this.scene;
 
-    const settingsCircle = scene.add.graphics().setDepth(100);
-    settingsCircle.fillStyle(0x2a3565, 0.6);
-    settingsCircle.fillCircle(GAME_WIDTH - 28, 36, 20);
-    settingsCircle.lineStyle(1, 0x4488CC, 0.3);
-    settingsCircle.strokeCircle(GAME_WIDTH - 28, 36, 20);
+    // Glossy 3D Blue Settings Button
+    const pauseBtn = scene.add.container(GAME_WIDTH - 35, 42).setDepth(20);
+    
+    // Inner container for visuals (to prevent hover jitter)
+    const pauseVisuals = scene.add.container(0, 0);
+    pauseBtn.add(pauseVisuals);
 
-    this.pauseBtn = scene.add.text(GAME_WIDTH - 28, 36, '⚙', {
-      fontSize: '22px'
-    }).setOrigin(0.5).setDepth(100).setInteractive({ useHandCursor: true, hitArea: new Phaser.Geom.Circle(0, 0, 22), hitAreaCallback: Phaser.Geom.Circle.Contains });
-    this.pauseBtn.on('pointerdown', () => {
-      SoundManager.uiClick();
-      scene.tweens.add({
-        targets: [this.pauseBtn, settingsCircle],
-        scaleX: 0.85, scaleY: 0.85,
-        duration: 60, yoyo: true, ease: 'Quad.easeIn'
-      });
-      scene.showPauseMenu();
+    const pauseBg = scene.add.graphics();
+    const r = 24;
+
+    // Drop shadow
+    pauseBg.fillStyle(0x000000, 0.3);
+    pauseBg.fillCircle(0, 4, r + 1);
+
+    // Outer dark rim (bottom shadow of the torus)
+    pauseBg.fillStyle(0x004C99, 1);
+    pauseBg.fillCircle(0, 1, r);
+
+    // Outer bright rim (top highlight of the torus)
+    pauseBg.fillStyle(0x00A3FF, 1);
+    pauseBg.fillCircle(0, -1, r);
+
+    // Mid-tone torus body
+    pauseBg.fillStyle(0x007BFF, 1);
+    pauseBg.fillCircle(0, 0, r - 1.5);
+
+    // Inner dark rim (shadow cast by torus into the center)
+    pauseBg.fillStyle(0x003380, 1);
+    pauseBg.fillCircle(0, 0, r - 6);
+
+    // Inner sunken face (lighter blue)
+    pauseBg.fillStyle(0x0088FF, 1);
+    pauseBg.fillCircle(0, 1, r - 7);
+    
+    pauseVisuals.add(pauseBg);
+
+    // Gear Icon Drop Shadow
+    const iconShadow = scene.add.text(0, 3, '⚙', {
+      fontSize: '32px', color: '#002266'
+    }).setOrigin(0.5, 0.5);
+    pauseVisuals.add(iconShadow);
+
+    // Metallic white gear
+    const pauseIcon = scene.add.text(0, 0, '⚙', {
+      fontSize: '32px', color: '#FFFFFF',
+      stroke: '#E0EEFF', strokeThickness: 2,
+      shadow: { offsetX: 0, offsetY: 0, color: '#ffffff', blur: 4, fill: true }
+    }).setOrigin(0.5, 0.5);
+    pauseVisuals.add(pauseIcon);
+
+    // Static interactive zone (larger than visual button for easier tapping)
+    const hitZone = scene.add.zone(0, 0, r * 2 + 20, r * 2 + 20).setInteractive({ useHandCursor: true });
+    pauseBtn.add(hitZone);
+    
+    hitZone.on('pointerover', () => {
+      scene.tweens.killTweensOf(pauseVisuals);
+      scene.tweens.add({ targets: pauseVisuals, scaleX: 1.1, scaleY: 1.1, duration: 200, ease: 'Back.easeOut' });
     });
+    hitZone.on('pointerout', () => {
+      scene.tweens.killTweensOf(pauseVisuals);
+      scene.tweens.add({ targets: pauseVisuals, scaleX: 1, scaleY: 1, duration: 200, ease: 'Power2' });
+    });
+    hitZone.on('pointerdown', () => {
+      SoundManager.uiClick();
+      scene.tweens.killTweensOf(pauseVisuals);
+      scene.tweens.add({ targets: pauseVisuals, scaleX: 0.9, scaleY: 0.9, duration: 100, yoyo: true });
+      scene.time.delayedCall(150, () => scene.showPauseMenu());
+    });
+    this.pauseBtn = pauseBtn;
 
-    this.scoreText = scene.add.text(GAME_WIDTH / 2, 60, '0', {
-      fontSize: '48px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+    // Level Badge
+    const roundW = 110;
+    const roundX = GAME_WIDTH / 2 - roundW / 2;
+    const roundY = 16;
+    const roundH = 40;
+    const roundR = 20;
+
+    const lvlBg = scene.add.graphics().setDepth(19);
+    lvlBg.fillStyle(0x050A1A, 0.5);
+    lvlBg.fillRoundedRect(roundX, roundY, roundW, roundH, roundR);
+    lvlBg.lineStyle(2, 0x44AAFF, 0.6);
+    lvlBg.strokeRoundedRect(roundX, roundY, roundW, roundH, roundR);
+
+    this.levelText = scene.add.text(GAME_WIDTH / 2, roundY + roundH / 2, 'Round 1', {
+      fontSize: '20px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+      fontStyle: '900', color: '#FFFFFF',
+      shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 3, fill: true, alpha: 0.6 }
+    }).setOrigin(0.5).setDepth(20);
+
+    // Massive Score Text
+    this.scoreText = scene.add.text(GAME_WIDTH / 2, 70, '0', {
+      fontSize: '64px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: '#ffffff',
-      shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 4, fill: true }
+      shadow: { offsetX: 0, offsetY: 4, color: '#002266', blur: 0, fill: true }
     }).setOrigin(0.5, 0);
 
     this.comboText = scene.add.text(GAME_WIDTH / 2, GRID_OFFSET_Y + 180, '', {
@@ -59,11 +131,6 @@ export class UIManager {
       stroke: '#000000', strokeThickness: 3
     }).setOrigin(0.5).setAlpha(0).setDepth(20);
     
-    this.levelText = scene.add.text(20, 36, 'Level 1', {
-      fontSize: '18px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-      fontStyle: 'bold', color: '#FFD700',
-    }).setOrigin(0, 0.5).setDepth(20);
-
     this.screenFlash = scene.add.image(0, 0, 'screen_flash').setOrigin(0).setDepth(50).setAlpha(0);
   }
 
@@ -71,22 +138,63 @@ export class UIManager {
     const scene = this.scene;
     const bestScore = this.scoreManager.getHighScore();
 
-    this.bestScoreLabel = scene.add.text(GAME_WIDTH - 65, 36, bestScore > 0 ? `BEST: ${bestScore.toLocaleString()}` : '', {
-      fontSize: '14px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-      fontStyle: 'bold', color: '#FFD93D'
-    }).setOrigin(1, 0.5).setDepth(5).setAlpha(0.9);
+    const pillX = 25;
+    const pillY = 20;
+    const pillW = 125;
+    const pillH = 44;
+    const pillR = 22;
 
-    this.distanceText = scene.add.text(GAME_WIDTH / 2, 115, '', {
-      fontSize: '11px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', color: '#66DD88'
+    this.bestBg = scene.add.container(0, 0).setDepth(4);
+    
+    // Bottom highlight for depth (light blue)
+    const highlight = scene.add.graphics();
+    highlight.fillStyle(0x4466AA, 0.4);
+    highlight.fillRoundedRect(pillX, pillY + 2, pillW, pillH, pillR);
+    this.bestBg.add(highlight);
+
+    // Main sunken background (very dark blue)
+    const mainBg = scene.add.graphics();
+    mainBg.fillStyle(0x182444, 1);
+    mainBg.fillRoundedRect(pillX, pillY, pillW, pillH, pillR);
+    this.bestBg.add(mainBg);
+
+    // Inner top shadow
+    const innerShadow = scene.add.graphics();
+    innerShadow.lineStyle(3, 0x0A1229, 0.6);
+    innerShadow.strokeRoundedRect(pillX, pillY, pillW, pillH, pillR);
+    this.bestBg.add(innerShadow);
+
+    // Trophy Icon overlapping the left edge
+    this.trophyIcon = scene.add.text(pillX + 5, pillY + pillH / 2, '🏆', {
+      fontSize: '40px',
+      shadow: { offsetX: 0, offsetY: 4, color: '#000000', blur: 4, fill: true, alpha: 0.4 }
+    }).setOrigin(0.5, 0.5);
+    this.bestBg.add(this.trophyIcon);
+
+    // Golden Score Label
+    this.bestScoreLabel = scene.add.text(pillX + 45, pillY + pillH / 2 + 2, bestScore > 0 ? bestScore.toLocaleString() : '', {
+      fontSize: '26px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+      fontStyle: 'bold', color: '#FFB300',
+      shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 0, fill: true, alpha: 0.3 }
+    }).setOrigin(0, 0.5);
+    this.bestBg.add(this.bestScoreLabel);
+    
+    if (bestScore === 0) this.bestBg.setAlpha(0);
+
+    this.distanceText = scene.add.text(GAME_WIDTH / 2, 155, '', {
+      fontSize: '22px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', 
+      fontStyle: 'bold', color: '#FFD700',
+      stroke: '#002266', strokeThickness: 4,
+      shadow: { offsetX: 0, offsetY: 2, color: '#001133', blur: 4, fill: true, alpha: 0.6 }
     }).setOrigin(0.5).setDepth(5).setAlpha(0);
 
     this.motivationText = scene.add.text(GAME_WIDTH / 2, GRID_OFFSET_Y - 22, '', {
-      fontSize: '14px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+      fontSize: '16px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: '#FFD700'
     }).setOrigin(0.5).setDepth(15).setAlpha(0);
 
-    this.newHSBanner = scene.add.text(GAME_WIDTH / 2, 140, '🔥 NEW HIGH SCORE! 🔥', {
-      fontSize: '16px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+    this.newHSBanner = scene.add.text(GAME_WIDTH / 2, 155, '🔥 NEW HIGH SCORE! 🔥', {
+      fontSize: '18px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: 'bold', color: '#FFD700',
       stroke: '#FF6600', strokeThickness: 3
     }).setOrigin(0.5).setDepth(20).setAlpha(0);
@@ -151,10 +259,10 @@ export class UIManager {
 
     const formatted = toScore.toLocaleString();
     const digitCount = formatted.length;
-    const fontSize = 48;
-    const charWidth = 26;
+    const fontSize = 64;
+    const charWidth = 34;
     const startX = GAME_WIDTH / 2 - (digitCount * charWidth) / 2;
-    const baseY = 60;
+    const baseY = 70;
 
     // Determine which digits changed (comparing from right)
     const maxLen = Math.max(fromStr.length, toStr.length);
@@ -300,9 +408,9 @@ export class UIManager {
       ]
     });
 
-    if (combo >= 3) {
-      scene.cameras.main.shake(300, (combo * 3) / 1000);
-    }
+    // if (combo >= 3 && SoundManager.isHapticsEnabled()) {
+    //   scene.cameras.main.shake(120, (combo * 1.5) / 1000);
+    // }
   }
 
   showScorePopup(points, clearedCells, combo) {
@@ -348,8 +456,8 @@ export class UIManager {
       ]
     });
 
-    this.bestScoreLabel.setText(`BEST: ${this.scoreManager.getScore().toLocaleString()}`);
-    this.bestScoreLabel.setColor('#FFD700');
+    this.bestBg.setAlpha(1);
+    this.bestScoreLabel.setText(this.scoreManager.getScore().toLocaleString());
   }
 
   shutdown() {

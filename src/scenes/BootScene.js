@@ -22,6 +22,7 @@ export class BootScene extends Phaser.Scene {
     this.load.audio('noSpace', 'assets/audio/noSpace.mp3');
     this.load.audio('highScore', 'assets/audio/highScore.mp3');
     this.load.audio('buttonClick', 'assets/audio/buttonClick.mp3');
+    this.load.audio('devlanceStudio', 'assets/audio/devlance_studio_sound.wav');
   }
 
   create() {
@@ -32,29 +33,62 @@ export class BootScene extends Phaser.Scene {
 
   generateBlockTextures() {
     const size = CELL_SIZE;
-    const r = 8; // Block blast uses slightly rounded squares
+    const r = 8;
 
     COLORS.forEach((color, index) => {
       const gfx = this.add.graphics();
       const baseColor = Phaser.Display.Color.IntegerToColor(color);
 
-      // 1. Full dark background (creates the bottom and right dark bevels)
-      const darkColor = baseColor.clone().darken(35);
-      gfx.fillStyle(darkColor.color, 1);
-      gfx.fillRect(0, 0, size, size);
+      // We'll draw 4 distinct bevel polygons around a center square 
+      // to exactly match the classic raised-button block texture.
+      const pad = Math.floor(size * 0.16); // The bevel thickness
+      
+      const topColor = baseColor.clone().lighten(35).color;
+      const leftColor = baseColor.clone().lighten(15).color;
+      const rightColor = baseColor.clone().darken(15).color;
+      const bottomColor = baseColor.clone().darken(35).color;
 
-      // 2. Light top-left triangle (creates the top and left bright bevels)
-      const lightColor = baseColor.clone().lighten(35);
-      gfx.fillStyle(lightColor.color, 1);
+      // Top Bevel
+      gfx.fillStyle(topColor, 1);
       gfx.beginPath();
       gfx.moveTo(0, 0);
       gfx.lineTo(size, 0);
+      gfx.lineTo(size - pad, pad);
+      gfx.lineTo(pad, pad);
+      gfx.closePath();
+      gfx.fillPath();
+
+      // Left Bevel
+      gfx.fillStyle(leftColor, 1);
+      gfx.beginPath();
+      gfx.moveTo(0, 0);
+      gfx.lineTo(pad, pad);
+      gfx.lineTo(pad, size - pad);
       gfx.lineTo(0, size);
       gfx.closePath();
       gfx.fillPath();
 
-      // 3. Center flat color block
-      const pad = Math.floor(size * 0.12); // ~12% thickness for the bevel
+      // Right Bevel
+      gfx.fillStyle(rightColor, 1);
+      gfx.beginPath();
+      gfx.moveTo(size, 0);
+      gfx.lineTo(size, size);
+      gfx.lineTo(size - pad, size - pad);
+      gfx.lineTo(size - pad, pad);
+      gfx.closePath();
+      gfx.fillPath();
+
+      // Bottom Bevel
+      gfx.fillStyle(bottomColor, 1);
+      gfx.beginPath();
+      gfx.moveTo(0, size);
+      gfx.lineTo(pad, size - pad);
+      gfx.lineTo(size - pad, size - pad);
+      gfx.lineTo(size, size);
+      gfx.closePath();
+      gfx.fillPath();
+
+      // Center flat color block
       gfx.fillStyle(color, 1);
       gfx.fillRect(pad, pad, size - pad * 2, size - pad * 2);
 

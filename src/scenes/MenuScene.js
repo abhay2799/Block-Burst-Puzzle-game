@@ -29,19 +29,66 @@ export class MenuScene extends Phaser.Scene {
     this.time.delayedCall(600, () => this.animateTumblingPiece(W, H));
   }
 
-  // ─── BACKGROUND: Royal blue gradient matching reference ───
+  // ─── BACKGROUND: High fidelity animated gradient with floating blocks ───
   renderBackground(W, H) {
+    // Deep royal blue to rich cyan gradient
     const bg = this.add.graphics();
-    bg.fillGradientStyle(0x2B5BDE, 0x2B5BDE, 0x4A78E8, 0x4A78E8, 1);
+    bg.fillGradientStyle(0x1a3a9a, 0x1a3a9a, 0x4a78e8, 0x2b5bde, 1);
     bg.fillRect(0, 0, W, H);
+    
+    // Ambient glowing orbs
+    for (let i = 0; i < 5; i++) {
+      const orb = this.add.graphics();
+      const color = [0x44eeff, 0xaa66ff, 0x00ffaa][i % 3];
+      orb.fillStyle(color, 0.2);
+      orb.fillCircle(0, 0, 80 + Math.random() * 60);
+      orb.setPosition(Math.random() * W, Math.random() * H);
+      
+      this.tweens.add({
+        targets: orb,
+        x: orb.x + (Math.random() - 0.5) * 100,
+        y: orb.y + (Math.random() - 0.5) * 100,
+        alpha: { from: 0.2, to: 0.05 },
+        duration: 4000 + Math.random() * 4000,
+        yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+      });
+    }
+
+    // Floating translucent background blocks
+    for (let i = 0; i < 8; i++) {
+      const size = 30 + Math.random() * 40;
+      const x = Math.random() * W;
+      const y = H + Math.random() * 200;
+      // Draw centered so it rotates cleanly
+      const block = this.createGlossyBlock(-size/2, -size/2, size, 0x4A78E8, 0x2B5BDE, 0x88AAFF);
+      block.setPosition(x, y);
+      block.setAlpha(0.2 + Math.random() * 0.3);
+      block.setAngle(Math.random() * 360);
+      block.setDepth(1);
+      
+      this.tweens.add({
+        targets: block,
+        y: -100,
+        angle: block.angle + Phaser.Math.Between(90, 360),
+        duration: 8000 + Math.random() * 10000,
+        repeat: -1,
+        ease: 'Linear'
+      });
+    }
   }
 
   // ─── LOGO: "BLOCK BURST" matching reference composition ───
   renderLogo(W, H) {
     const row1Y = H * 0.17;
-    const row2Y = H * 0.275;
+    const row2Y = H * 0.285;
     
     const logoContainer = this.add.container(0, 0).setDepth(15);
+
+    // Huge ambient glow behind the logo to make it pop like a high-end game
+    const logoGlow = this.add.graphics();
+    logoGlow.fillStyle(0xFFFFFF, 0.1);
+    logoGlow.fillCircle(W / 2, (row1Y + row2Y) / 2, 150);
+    logoContainer.add(logoGlow);
 
     // BLOCK letter palette: Yellow(B), Blue(L), Red(O), Yellow(C), Purple(K)
     const blockPalette = [
@@ -54,45 +101,52 @@ export class MenuScene extends Phaser.Scene {
 
     // "BLOCK" - massive, tight, glossy letters
     const blockChars = ['B', 'L', 'O', 'C', 'K'];
-    const blockFontSize = 96;
-    const blockSpacing = 58;
+    const blockFontSize = 100;
+    const blockSpacing = 62;
     const blockStartX = W / 2 - (blockChars.length - 1) * blockSpacing / 2;
 
     blockChars.forEach((ch, i) => {
       const x = blockStartX + i * blockSpacing;
       const style = blockPalette[i];
 
-      // 3D extrusion layers
-      for (let layer = 4; layer >= 1; layer--) {
-        const offsetX = layer * 1.2;
-        const offsetY = layer * 2.5;
-        const color = layer > 2 ? style.deep : style.shadow;
+      // Smooth, solid 3D extrusion using thick strokes and multiple tight layers
+      for (let layer = 12; layer >= 1; layer--) {
+        const offsetX = layer * 0.4;
+        const offsetY = layer * 1.5;
+        const color = layer > 6 ? style.deep : style.shadow;
         const extText = this.add.text(x + offsetX, row1Y + offsetY, ch, {
           fontSize: `${blockFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-          fontStyle: 'bold', color: color
+          fontStyle: '900', color: color,
+          stroke: color, strokeThickness: 14 // Fills gaps to make it look like a solid 3D block!
         }).setOrigin(0.5);
         logoContainer.add(extText);
       }
 
-      // Main face with thick stroke
+      // Deep outer dark rim to separate letters cleanly
+      const rimLetter = this.add.text(x, row1Y, ch, {
+        fontSize: `${blockFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+        fontStyle: '900', color: style.stroke,
+        stroke: style.stroke, strokeThickness: 16
+      }).setOrigin(0.5).setScale(0);
+      logoContainer.add(rimLetter);
+
+      // Main vibrant face
       const letter = this.add.text(x, row1Y, ch, {
         fontSize: `${blockFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-        fontStyle: 'bold', color: style.fill,
-        stroke: style.stroke, strokeThickness: 6,
-        shadow: { offsetX: 1, offsetY: 2, color: style.shadow, blur: 0, fill: false, stroke: true }
+        fontStyle: '900', color: style.fill,
+        stroke: style.stroke, strokeThickness: 2
       }).setOrigin(0.5).setScale(0);
       logoContainer.add(letter);
 
-      // Glossy top highlight
-      const shine = this.add.text(x, row1Y - 3, ch, {
+      // Glossy top highlight (crisp)
+      const shine = this.add.text(x, row1Y - 4, ch, {
         fontSize: `${blockFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-        fontStyle: 'bold', color: style.highlight,
-        stroke: style.fill, strokeThickness: 6
-      }).setOrigin(0.5).setAlpha(0.4).setScale(0);
+        fontStyle: '900', color: style.highlight,
+      }).setOrigin(0.5).setAlpha(0.6).setScale(0);
       logoContainer.add(shine);
 
       this.tweens.add({
-        targets: [letter, shine],
+        targets: [rimLetter, letter, shine],
         scaleX: 1, scaleY: 1,
         duration: 350, delay: i * 60,
         ease: 'Back.easeOut'
@@ -101,8 +155,9 @@ export class MenuScene extends Phaser.Scene {
 
     // Crown on "O" (index 2) - big, sits directly on top
     const crownX = blockStartX + 2 * blockSpacing;
-    const crown = this.add.text(crownX, row1Y - 60, '👑', {
-      fontSize: '52px'
+    const crown = this.add.text(crownX, row1Y - 65, '👑', {
+      fontSize: '56px',
+      shadow: { offsetX: 0, offsetY: 4, color: '#000000', blur: 0, fill: true, alpha: 0.3 }
     }).setOrigin(0.5).setScale(0);
     logoContainer.add(crown);
 
@@ -111,47 +166,50 @@ export class MenuScene extends Phaser.Scene {
       duration: 400, delay: 400, ease: 'Back.easeOut'
     });
     this.tweens.add({
-      targets: crown, y: crown.y - 4,
+      targets: crown, y: crown.y - 6,
       duration: 1600, yoyo: true, repeat: -1,
       ease: 'Sine.easeInOut', delay: 900
     });
 
-    // "BURST" - bold, bright cyan, beveled 3D style
+    // "BURST" - bold, bright cyan, beveled solid 3D style
     const dropY = row2Y;
-    const dropFontSize = 62;
+    const dropFontSize = 68;
 
-    // Shadow layers for BURST
-    const burstBg1 = this.add.text(W / 2 + 3, dropY + 6, 'BURST', {
+    // Solid dark navy base to anchor it
+    const burstDeep = this.add.text(W / 2, dropY + 14, 'BURST', {
       fontSize: `${dropFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-      fontStyle: 'bold', color: '#0055AA'
+      fontStyle: '900', color: '#001133',
+      stroke: '#001133', strokeThickness: 20
     }).setOrigin(0.5);
-    logoContainer.add(burstBg1);
+    logoContainer.add(burstDeep);
 
-    const burstBg2 = this.add.text(W / 2 + 2, dropY + 4, 'BURST', {
+    // Thick mid-blue 3D shadow layer
+    const burstShadow = this.add.text(W / 2, dropY + 8, 'BURST', {
       fontSize: `${dropFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-      fontStyle: 'bold', color: '#0077CC'
+      fontStyle: '900', color: '#0055AA',
+      stroke: '#0055AA', strokeThickness: 16
     }).setOrigin(0.5);
-    logoContainer.add(burstBg2);
+    logoContainer.add(burstShadow);
 
-    // Main BURST text - bright vivid cyan
+    // Main BURST text - bright vivid cyan with crisp stroke
     const dropText = this.add.text(W / 2, dropY, 'BURST', {
       fontSize: `${dropFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-      fontStyle: 'bold', color: '#44EEFF',
-      stroke: '#0088BB', strokeThickness: 5,
-      shadow: { offsetX: 0, offsetY: 2, color: '#004466', blur: 0, fill: true }
-    }).setOrigin(0.5).setScale(0);
+      fontStyle: '900', color: '#66FFFF',
+      stroke: '#0088DD', strokeThickness: 8,
+      shadow: { offsetX: 0, offsetY: 0, color: '#00FFFF', blur: 10, fill: true, alpha: 0.5 }
+    }).setOrigin(0.5).setAlpha(0).setScale(0);
     logoContainer.add(dropText);
 
-    // Bright highlight on BURST
+    // Sharp white highlight for glassy premium feel
     const dropShine = this.add.text(W / 2, dropY - 2, 'BURST', {
       fontSize: `${dropFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-      fontStyle: 'bold', color: '#BBFFFF',
-      stroke: '#44EEFF', strokeThickness: 5
-    }).setOrigin(0.5).setAlpha(0.45).setScale(0);
+      fontStyle: '900', color: '#FFFFFF'
+    }).setOrigin(0.5).setAlpha(0).setScale(0);
     logoContainer.add(dropShine);
 
     this.tweens.add({
       targets: [dropText, dropShine],
+      alpha: 1,
       scaleX: 1, scaleY: 1,
       duration: 350, delay: 400,
       ease: 'Back.easeOut'
@@ -167,27 +225,61 @@ export class MenuScene extends Phaser.Scene {
       ease: 'Sine.easeInOut'
     });
 
-    // "ADVENTURE MASTER" subtitle
-    const subY = dropY + 50;
-    const subtitle = this.add.text(W / 2, subY, 'A D V E N T U R E   M A S T E R', {
-      fontSize: '14px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-      fontStyle: 'bold', color: '#FFFFFF',
-      shadow: { offsetX: 0, offsetY: 1, color: '#000000', blur: 2, fill: true }
-    }).setOrigin(0.5).setDepth(10).setAlpha(0.85);
+    // "PUZZLE GAME" subtitle
+    const subY = dropY + 80;
+    const subtitle = this.add.text(W / 2, subY, 'P U Z Z L E   G A M E', {
+      fontSize: '18px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+      fontStyle: '900', color: '#FFFFFF',
+      stroke: '#003388', strokeThickness: 4,
+      shadow: { offsetX: 0, offsetY: 3, color: '#000000', blur: 0, fill: true, alpha: 0.5 }
+    }).setOrigin(0.5).setDepth(10).setAlpha(0);
 
     this.tweens.add({
       targets: subtitle, alpha: 1,
       duration: 500, delay: 800, ease: 'Power2'
     });
 
-    // High score
+    // High score pill
     const tempSM = new ScoreManager();
     const hs = tempSM.getHighScore();
     if (hs > 0) {
-      const hsText = this.add.text(W / 2, subY + 30, `Best: ${hs.toLocaleString()}`, {
-        fontSize: '17px', fontFamily: '"Fredoka", "Baloo 2", sans-serif', color: '#FFE66D'
-      }).setOrigin(0.5).setDepth(10).setAlpha(0);
-      this.tweens.add({ targets: hsText, alpha: 1, duration: 400, delay: 1000 });
+      const pillW = 150;
+      const pillH = 46;
+      const pillR = 23;
+      const pillX = W / 2 - pillW / 2 + 10;
+      const pillY = subY + 25;
+
+      const bestBg = this.add.container(0, 0).setDepth(10).setAlpha(0);
+      
+      const highlight = this.add.graphics();
+      highlight.fillStyle(0x4466AA, 0.4);
+      highlight.fillRoundedRect(pillX, pillY + 2, pillW, pillH, pillR);
+      bestBg.add(highlight);
+
+      const mainBg = this.add.graphics();
+      mainBg.fillStyle(0x182444, 1);
+      mainBg.fillRoundedRect(pillX, pillY, pillW, pillH, pillR);
+      bestBg.add(mainBg);
+
+      const innerShadow = this.add.graphics();
+      innerShadow.lineStyle(3, 0x0A1229, 0.6);
+      innerShadow.strokeRoundedRect(pillX, pillY, pillW, pillH, pillR);
+      bestBg.add(innerShadow);
+
+      const trophyIcon = this.add.text(pillX + 5, pillY + pillH / 2, '🏆', {
+        fontSize: '40px',
+        shadow: { offsetX: 0, offsetY: 4, color: '#000000', blur: 4, fill: true, alpha: 0.4 }
+      }).setOrigin(0.5, 0.5);
+      bestBg.add(trophyIcon);
+
+      const bestScoreLabel = this.add.text(pillX + 45, pillY + pillH / 2 + 2, hs.toLocaleString(), {
+        fontSize: '28px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+        fontStyle: '900', color: '#FFB300',
+        shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 0, fill: true, alpha: 0.3 }
+      }).setOrigin(0, 0.5);
+      bestBg.add(bestScoreLabel);
+
+      this.tweens.add({ targets: bestBg, alpha: 1, duration: 400, delay: 1000 });
     }
   }
 
@@ -270,8 +362,21 @@ export class MenuScene extends Phaser.Scene {
   }
 
   buildPlayButton(cx, cy, W, H) {
+    // Massive vibrant glow behind the play button
+    const glow = this.add.graphics().setDepth(5);
+    glow.fillStyle(0x5ccc00, 0.4);
+    glow.fillCircle(cx, cy, 140);
+    glow.setScale(0);
+    
+    this.tweens.add({
+      targets: glow, scaleX: 1, scaleY: 1, duration: 800, ease: 'Elastic.easeOut',
+      onComplete: () => {
+        this.tweens.add({ targets: glow, alpha: 0.15, scaleX: 1.15, scaleY: 1.15, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      }
+    });
+
     const { container: btn } = ButtonFactory.create(this, cx, cy, 260, 72, 'PLAY', '▶', 'primary', () => {
-      this.scene.start('GameScene');
+      this.scene.start('GameScene', {});
     });
     
     btn.setScale(0);

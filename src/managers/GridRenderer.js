@@ -22,16 +22,20 @@ export class GridRenderer {
 
     const gridBg = this.scene.add.graphics();
     // Stronger shadow under the board
-    gridBg.fillStyle(0x000000, 0.4);
-    gridBg.fillRoundedRect(startX - 10, startY - 4, totalSize + 20, totalSize + 20, 16);
+    gridBg.fillStyle(0x050A1A, 0.7);
+    gridBg.fillRoundedRect(startX - 12, startY - 2, totalSize + 24, totalSize + 24, 20);
     
-    // Main board base (Glassmorphism white tint)
-    gridBg.fillStyle(0xffffff, 0.05);
+    // Main board base (Vibrant Glassmorphism)
+    gridBg.fillStyle(0x112255, 0.4);
     gridBg.fillRoundedRect(startX - 10, startY - 10, totalSize + 20, totalSize + 20, 16);
     
-    // Inner white stroke for glass highlight
-    gridBg.lineStyle(1.5, 0xffffff, 0.2);
+    // Colorful glowing border
+    gridBg.lineStyle(2, 0x44AAFF, 0.6);
     gridBg.strokeRoundedRect(startX - 10, startY - 10, totalSize + 20, totalSize + 20, 16);
+
+    // Inner white stroke for glass highlight
+    gridBg.lineStyle(1, 0xffffff, 0.2);
+    gridBg.strokeRoundedRect(startX - 8, startY - 8, totalSize + 16, totalSize + 16, 14);
 
     this._createCells(startX, startY);
     this._initBlockSprites();
