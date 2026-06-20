@@ -344,16 +344,16 @@ export class UIManager {
 
   showComboText(combo, placedCells) {
     const scene = this.scene;
-    const words = ["", "", "Wow!", "Good!", "Great!", "Excellent!", "Amazing!", "Wonderful!", "Genius!", "Master!"];
-    const colors = ['#ffffff', '#ffffff', '#FFCC00', '#00FF44', '#00FFFF', '#FF8800', '#FF00FF', '#FF4444', '#8800FF', '#FFD700'];
-    const strokes = ['#000000', '#000000', '#886600', '#004400', '#004488', '#662200', '#440044', '#440000', '#220066', '#664400'];
+    const words = ["", "Wow!", "Good!", "Great!", "Excellent!", "Amazing!", "Wonderful!", "Genius!", "Master!"];
+    const colors = ['#ffffff', '#FFCC00', '#00FF44', '#00FFFF', '#FF8800', '#FF00FF', '#FF4444', '#8800FF', '#FFD700'];
+    const strokes = ['#000000', '#886600', '#004400', '#004488', '#662200', '#440044', '#440000', '#220066', '#664400'];
     
     const wordIndex = Math.min(combo, words.length - 1);
     const msg = words[wordIndex];
     
     if (!msg) return;
 
-    if (combo >= 2 && words[wordIndex]) {
+    if (combo >= 1 && words[wordIndex]) {
       SoundManager.speak(words[wordIndex].replace('!', ''));
     }
 
