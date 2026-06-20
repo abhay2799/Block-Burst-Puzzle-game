@@ -383,8 +383,6 @@ export const AdManager = {
   },
 
   async showBanner() {
-    if (bannerShowing) return;
-
     if (!this._isNativePlatform()) {
       console.log('[AdManager] Showing web placeholder for Banner Ad');
       let placeholder = document.getElementById('ad-banner-placeholder');
@@ -434,12 +432,13 @@ export const AdManager = {
     } catch (e) {
       console.warn('[AdManager] ❌ Banner show failed:', e.message || e);
       console.warn('[AdManager] Banner error details:', JSON.stringify(e));
+      bannerShowing = false;
+      // Retry showing banner to ensure it never disappears permanently
+      setTimeout(() => this.showBanner(), 5000);
     }
   },
 
   async hideBanner() {
-    if (!bannerShowing) return;
-
     if (!this._isNativePlatform()) {
       const placeholder = document.getElementById('ad-banner-placeholder');
       if (placeholder) {
@@ -450,8 +449,8 @@ export const AdManager = {
     }
 
     try {
-      await AdMob.hideBanner();
       bannerShowing = false;
+      await AdMob.hideBanner();
     } catch (e) {
       console.warn('[AdManager] Banner hide failed:', e.message || e);
     }
