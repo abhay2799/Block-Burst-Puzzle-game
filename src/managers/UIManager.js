@@ -350,10 +350,11 @@ export class UIManager {
     
     if (!msg) return;
 
-    // Determine hex strings for the bright color and a darker stroke color
-    const hexColor = '#' + glowColor.toString(16).padStart(6, '0');
-    const darkerColor = Phaser.Display.Color.IntegerToColor(glowColor).darken(40).color;
-    const darkHex = '#' + darkerColor.toString(16).padStart(6, '0');
+    const textColors = ["#FFFFFF", "#FFFFFF", "#55FF55", "#FFFF55", "#FFBB55", "#FF5555", "#FF55FF", "#55FFFF", "#55AAFF", "#FFD700"];
+    const strokeColors = ["#000000", "#000000", "#004400", "#554400", "#552200", "#440000", "#440044", "#004444", "#001144", "#553300"];
+    
+    const hexColor = textColors[wordIndex] || "#FFD700";
+    const darkHex = strokeColors[wordIndex] || "#553300";
 
     if (combo >= 2 && words[wordIndex]) {
       SoundManager.speak(words[wordIndex].replace('!', ''));
@@ -362,8 +363,8 @@ export class UIManager {
     this.comboText.setText(msg);
     this.comboText.setColor(hexColor);
     this.comboText.setStroke(darkHex, 8);
-    // Remove shadow, keep it flat 3D looking like the reference image
-    this.comboText.setShadow(0, 0, '#000000', 0, false, false);
+    // Add strong shadow to make the word clear and pop
+    this.comboText.setShadow(0, 4, '#000000', 4, true, true);
     
     // Position near the placed piece
     let cx = GAME_WIDTH / 2;
