@@ -49,14 +49,15 @@ export class InputHandler {
     const offsetX = -(piece.width * CELL_SIZE) / 2;
     const offsetY = -(piece.height * CELL_SIZE) / 2 + DRAG_FINGER_OFFSET_Y;
 
-    let i = 0;
-    for (const cell of piece.cells) {
-      const targetX = offsetX + cell.col * CELL_SIZE;
-      const targetY = offsetY + cell.row * CELL_SIZE;
+    for (const sprite of container.list) {
+      if (sprite._cellCol === undefined) continue;
+
+      const targetX = offsetX + sprite._cellCol * cellTotal;
+      const targetY = offsetY + sprite._cellRow * cellTotal;
       
-      scene.tweens.killTweensOf(container.list[i]);
+      scene.tweens.killTweensOf(sprite);
       scene.tweens.add({
-        targets: container.list[i],
+        targets: sprite,
         x: targetX,
         y: targetY,
         scaleX: 1,
@@ -64,7 +65,6 @@ export class InputHandler {
         duration: 90, // Blazing fast pickup snap
         ease: 'Cubic.easeOut' // Smoother, faster curve than Back for ultra-responsiveness
       });
-      i++;
     }
 
     if (VISUAL_SETTINGS.settleAnimation) {
@@ -429,19 +429,18 @@ export class InputHandler {
       }
     });
 
-    let i = 0;
-    for (const cell of piece.cells) {
-      this.scene.tweens.killTweensOf(container.list[i]);
+    for (const sprite of container.list) {
+      if (sprite._cellCol === undefined) continue;
+      this.scene.tweens.killTweensOf(sprite);
       this.scene.tweens.add({
-        targets: container.list[i],
-        x: offsetX + cell.col * cellSize,
-        y: offsetY + cell.row * cellSize,
+        targets: sprite,
+        x: offsetX + sprite._cellCol * cellSize,
+        y: offsetY + sprite._cellRow * cellSize,
         scaleX: PIECE_SCALE_SMALL,
         scaleY: PIECE_SCALE_SMALL,
         duration: TIMING.PIECE_RETURN_DURATION,
         ease: 'Back.easeOut'
       });
-      i++;
     }
   }
 
