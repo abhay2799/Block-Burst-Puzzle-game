@@ -28,6 +28,7 @@ let admobInitialized = false;
 let interstitialLoaded = false;
 let rewardedLoaded = false;
 let bannerShowing = false;
+let bannerCreated = false;
 let initializationInProgress = false;
 
 // Retry config
@@ -163,6 +164,7 @@ export const AdManager = {
       alert("Banner Ad Failed to Load: " + JSON.stringify(info));
 
       bannerShowing = false;
+      bannerCreated = false;
       try { await AdMob.removeBanner(); } catch(e) {}
       // AdMob often returns 'No Fill' when rate-limiting.
       // We continuously retry every 15s in the background. When AdMob lifts the limit, it will seamlessly appear.
@@ -423,27 +425,31 @@ export const AdManager = {
     }
 
     try {
-      // Safely resume instead of recreating to prevent duplicate view crashes
-      await AdMob.resumeBanner();
-      bannerShowing = true;
-      console.log('[AdManager] ✅ Banner resumed safely');
-      return;
-    } catch (resumeError) {
-      // If resume fails (banner doesn't exist), fall back to creating it
-      try {
-        const adId = getAdId('banner');
-        console.log('[AdManager] Showing banner with ID:', adId);
-        await AdMob.showBanner({
-          adId: adId,
-          adSize: BannerAdSize.BANNER,
-          position: BannerAdPosition.BOTTOM_CENTER,
-          margin: 0
-        });
+      if (bannerCreated) {
+        // Safely resume instead of recreating to prevent duplicate view crashes
+        await AdMob.resumeBanner();
         bannerShowing = true;
-        console.log('[AdManager] ✅ Banner show request sent');
-      } catch (e) {
-        console.warn('[AdManager] ❌ Banner show failed:', e.message || e);
+        console.log('[AdManager] ✅ Banner resumed safely');
+        return;
       }
+    } catch (resumeError) {
+      console.warn('[AdManager] Failed to resume banner, recreating...');
+    }
+
+    // Fall back to creating it
+    try {
+      const adId = getAdId('banner');
+      console.log('[AdManager] Showing banner with ID:', adId);
+      await AdMob.showBanner({
+        adId: adId,
+        adSize: BannerAdSize.BANNER,
+        position: BannerAdPosition.BOTTOM_CENTER
+      });
+      bannerShowing = true;
+      bannerCreated = true;
+      console.log('[AdManager] ✅ Banner show request sent');
+    } catch (e) {
+      console.warn('[AdManager] ❌ Banner show failed:', e.message || e);
     }
   },
 
