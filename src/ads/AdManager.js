@@ -442,7 +442,7 @@ export const AdManager = {
       console.log('[AdManager] Showing banner with ID:', adId);
       await AdMob.showBanner({
         adId: adId,
-        adSize: BannerAdSize.BANNER,
+        adSize: BannerAdSize.ADAPTIVE_BANNER,
         position: BannerAdPosition.BOTTOM_CENTER
       });
       bannerShowing = true;
