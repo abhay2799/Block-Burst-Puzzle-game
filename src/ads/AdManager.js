@@ -292,7 +292,8 @@ export const AdManager = {
       await AdMob.prepareInterstitial({
         adId: getAdId('interstitial')
       });
-      // We rely on 'interstitialAdLoaded' listener to set interstitialLoaded = true
+      interstitialLoaded = true;
+      console.log('[AdManager] ✅ Interstitial prepared successfully');
     } catch (e) {
       console.warn('[AdManager] Interstitial prepare failed:', e.message || e);
       interstitialLoaded = false;
@@ -346,7 +347,8 @@ export const AdManager = {
       await AdMob.prepareRewardVideoAd({
         adId: getAdId('rewarded')
       });
-      // We rely on 'RewardAdPluginEvents.Loaded' listener to set rewardedLoaded = true
+      rewardedLoaded = true;
+      console.log('[AdManager] ✅ Rewarded video prepared successfully');
     } catch (e) {
       console.warn('[AdManager] Rewarded video prepare failed:', e.message || e);
       rewardedLoaded = false;
