@@ -342,29 +342,26 @@ export class UIManager {
     });
   }
 
-  showComboText(combo, placedCells, glowColor) {
+  showComboText(combo, placedCells) {
     const scene = this.scene;
     const words = ["", "", "Good!", "Great!", "Amazing!", "Awesome!", "Wonderful!", "Incredible!", "Unstoppable!", "Legendary!"];
+    const colors = ['#ffffff', '#ffffff', '#00FF44', '#00FFFF', '#FF00FF', '#FF8800', '#FF4444', '#FFD700', '#FFD700', '#FFD700'];
+    const strokes = ['#000000', '#000000', '#004400', '#004488', '#440044', '#662200', '#440000', '#664400', '#664400', '#664400'];
+    
     const wordIndex = Math.min(combo, words.length - 1);
     const msg = words[wordIndex];
     
     if (!msg) return;
-
-    const textColors = ["#FFFFFF", "#FFFFFF", "#55FF55", "#FFFF55", "#FFBB55", "#FF5555", "#FF55FF", "#55FFFF", "#55AAFF", "#FFD700"];
-    const strokeColors = ["#000000", "#000000", "#004400", "#554400", "#552200", "#440000", "#440044", "#004444", "#001144", "#553300"];
-    
-    const hexColor = textColors[wordIndex] || "#FFD700";
-    const darkHex = strokeColors[wordIndex] || "#553300";
 
     if (combo >= 2 && words[wordIndex]) {
       SoundManager.speak(words[wordIndex].replace('!', ''));
     }
 
     this.comboText.setText(msg);
-    this.comboText.setColor(hexColor);
-    this.comboText.setStroke(darkHex, 8);
-    // Add strong shadow to make the word clear and pop
-    this.comboText.setShadow(0, 4, '#000000', 4, true, true);
+    this.comboText.setColor(colors[wordIndex] || '#FFD700');
+    this.comboText.setStroke(strokes[wordIndex] || '#664400', 8);
+    // Remove shadow, keep it flat 3D looking like the reference image
+    this.comboText.setShadow(0, 0, '#000000', 0, false, false);
     
     // Position near the placed piece
     let cx = GAME_WIDTH / 2;
