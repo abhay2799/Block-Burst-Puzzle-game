@@ -444,18 +444,10 @@ export class GameScene extends Phaser.Scene {
     container.originalX = x;
     container.originalY = y;
 
-    const glow = this.add.image(0, 0, 'particle').setScale(4).setAlpha(0).setBlendMode(Phaser.BlendModes.ADD);
-    container.addAt(glow, 0);
-
     container.setScale(0);
     this.tweens.add({
       targets: container, scaleX: 1, scaleY: 1,
       duration: 450, ease: 'Back.easeOut', delay: index * 100,
-      onStart: () => {
-        this.tweens.add({
-          targets: glow, alpha: 0.5, scale: 7, duration: 250, yoyo: true, onComplete: () => glow.destroy()
-        });
-      },
       onComplete: () => {
         container._breathTween = this.tweens.add({
           targets: container,
