@@ -203,7 +203,7 @@ export const AdManager = {
       console.warn('[AdManager] ❌ Interstitial FAILED to show:', JSON.stringify(info));
       this._isShowing = false;
       this._restoreInput();
-      this.prepareInterstitial();
+      setTimeout(() => this.prepareInterstitial(), 1000);
       if (this._interstitialCallback) {
         this._interstitialCallback();
         this._interstitialCallback = null;
@@ -215,7 +215,7 @@ export const AdManager = {
       this._isShowing = false;
       this._lastInterstitialTime = Date.now();
       this._restoreInput();
-      this.prepareInterstitial();
+      setTimeout(() => this.prepareInterstitial(), 1000);
       if (this._interstitialCallback) {
         this._interstitialCallback();
         this._interstitialCallback = null;
@@ -253,7 +253,7 @@ export const AdManager = {
       console.warn('[AdManager] ❌ Rewarded FAILED to show:', JSON.stringify(info));
       this._isShowing = false;
       this._restoreInput();
-      this.prepareRewardVideoAd();
+      setTimeout(() => this.prepareRewardVideoAd(), 1000);
       if (this._rewardCallback) {
         this._rewardCallback(false);
         this._rewardCallback = null;
@@ -269,7 +269,7 @@ export const AdManager = {
       console.log('[AdManager] Rewarded ad dismissed');
       this._isShowing = false;
       this._restoreInput();
-      this.prepareRewardVideoAd();
+      setTimeout(() => this.prepareRewardVideoAd(), 1000);
       if (this._rewardCallback) {
         this._rewardCallback(this._userEarnedReward);
         this._rewardCallback = null;
@@ -292,8 +292,7 @@ export const AdManager = {
       await AdMob.prepareInterstitial({
         adId: getAdId('interstitial')
       });
-      interstitialLoaded = true;
-      console.log('[AdManager] ✅ Interstitial prepared successfully');
+      // We rely on 'interstitialAdLoaded' listener to set interstitialLoaded = true
     } catch (e) {
       console.warn('[AdManager] Interstitial prepare failed:', e.message || e);
       interstitialLoaded = false;
@@ -347,8 +346,7 @@ export const AdManager = {
       await AdMob.prepareRewardVideoAd({
         adId: getAdId('rewarded')
       });
-      rewardedLoaded = true;
-      console.log('[AdManager] ✅ Rewarded video prepared successfully');
+      // We rely on 'RewardAdPluginEvents.Loaded' listener to set rewardedLoaded = true
     } catch (e) {
       console.warn('[AdManager] Rewarded video prepare failed:', e.message || e);
       rewardedLoaded = false;
