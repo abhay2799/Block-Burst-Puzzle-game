@@ -53,7 +53,12 @@ function speakVoice(text) {
   if (!soundEnabled || !soundManager) return;
   const key = 'voice_' + text.toLowerCase().replace(/[^a-z]/g, '');
   try {
-    soundManager.play(key, { volume: 1.0 });
+    // Apply rate and detune (pitch) to match the original enthusiastic SpeechSynthesis
+    soundManager.play(key, { 
+      volume: 1.0,
+      rate: 1.15,      // Slightly faster
+      detune: 300      // +300 cents (3 semitones higher pitch for enthusiasm)
+    });
   } catch (e) {}
 }
 
