@@ -77,7 +77,7 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
-  // ─── LOGO: "BLOCK BURST" matching reference composition ───
+  // ─── LOGO: "BLOCK BURST" exactly matching reference composition ───
   renderLogo(W, H) {
     const row1Y = H * 0.17;
     const row2Y = H * 0.285;
@@ -86,60 +86,60 @@ export class MenuScene extends Phaser.Scene {
 
     // Huge ambient glow behind the logo to make it pop like a high-end game
     const logoGlow = this.add.graphics();
-    logoGlow.fillStyle(0xFFFFFF, 0.1);
-    logoGlow.fillCircle(W / 2, (row1Y + row2Y) / 2, 150);
+    logoGlow.fillStyle(0xFFFFFF, 0.15);
+    logoGlow.fillCircle(W / 2, (row1Y + row2Y) / 2, 160);
     logoContainer.add(logoGlow);
 
-    // BLOCK letter palette: Yellow(B), Blue(L), Red(O), Yellow(C), Purple(K)
+    // EXACT colors for BLOCK: Yellow, Cyan, Red, Orange, Dark Blue
     const blockPalette = [
-      { fill: '#FFB833', highlight: '#FFE066', stroke: '#DD8800', shadow: '#995500', deep: '#553300' },
-      { fill: '#44BBFF', highlight: '#99DDFF', stroke: '#0099DD', shadow: '#005588', deep: '#003355' },
-      { fill: '#EE3333', highlight: '#FF7777', stroke: '#CC1111', shadow: '#880000', deep: '#550000' },
-      { fill: '#FFD000', highlight: '#FFEE55', stroke: '#CC9900', shadow: '#886600', deep: '#554400' },
-      { fill: '#BB44DD', highlight: '#DD88FF', stroke: '#8822AA', shadow: '#551177', deep: '#330055' },
+      { fill: '#FFD700', highlight: '#FFF599', stroke: '#CC8800', shadow: '#995500', deep: '#663300' }, // B: Yellow
+      { fill: '#00DDFF', highlight: '#88EEFF', stroke: '#0088CC', shadow: '#005599', deep: '#003366' }, // L: Light Blue
+      { fill: '#FF3333', highlight: '#FF9999', stroke: '#CC0000', shadow: '#880000', deep: '#440000' }, // O: Red
+      { fill: '#FFB800', highlight: '#FFE066', stroke: '#CC7700', shadow: '#884400', deep: '#442200' }, // C: Orange
+      { fill: '#2266FF', highlight: '#88AAFF', stroke: '#0033CC', shadow: '#001188', deep: '#000044' }, // K: Dark Blue
     ];
 
     // "BLOCK" - massive, tight, glossy letters
     const blockChars = ['B', 'L', 'O', 'C', 'K'];
-    const blockFontSize = 100;
-    const blockSpacing = 62;
+    const blockFontSize = 105;
+    const blockSpacing = 68; // Tighter spacing for overlap
     const blockStartX = W / 2 - (blockChars.length - 1) * blockSpacing / 2;
 
     blockChars.forEach((ch, i) => {
       const x = blockStartX + i * blockSpacing;
       const style = blockPalette[i];
+      const letterY = row1Y + (i % 2 === 0 ? -4 : 4); // Slight vertical offset curve
 
       // Smooth, solid 3D extrusion using thick strokes and multiple tight layers
-      for (let layer = 12; layer >= 1; layer--) {
-        const offsetX = layer * 0.4;
+      for (let layer = 14; layer >= 1; layer--) {
         const offsetY = layer * 1.5;
-        const color = layer > 6 ? style.deep : style.shadow;
-        const extText = this.add.text(x + offsetX, row1Y + offsetY, ch, {
+        const color = layer > 7 ? style.deep : style.shadow;
+        const extText = this.add.text(x, letterY + offsetY, ch, {
           fontSize: `${blockFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
           fontStyle: '900', color: color,
-          stroke: color, strokeThickness: 14 // Fills gaps to make it look like a solid 3D block!
+          stroke: color, strokeThickness: 16 // Fills gaps to make it look solid
         }).setOrigin(0.5);
         logoContainer.add(extText);
       }
 
       // Deep outer dark rim to separate letters cleanly
-      const rimLetter = this.add.text(x, row1Y, ch, {
+      const rimLetter = this.add.text(x, letterY, ch, {
         fontSize: `${blockFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
         fontStyle: '900', color: style.stroke,
-        stroke: style.stroke, strokeThickness: 16
+        stroke: style.stroke, strokeThickness: 20
       }).setOrigin(0.5).setScale(0);
       logoContainer.add(rimLetter);
 
       // Main vibrant face
-      const letter = this.add.text(x, row1Y, ch, {
+      const letter = this.add.text(x, letterY, ch, {
         fontSize: `${blockFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
         fontStyle: '900', color: style.fill,
-        stroke: style.stroke, strokeThickness: 2
+        stroke: style.stroke, strokeThickness: 4
       }).setOrigin(0.5).setScale(0);
       logoContainer.add(letter);
 
       // Glossy top highlight (crisp)
-      const shine = this.add.text(x, row1Y - 4, ch, {
+      const shine = this.add.text(x, letterY - 4, ch, {
         fontSize: `${blockFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
         fontStyle: '900', color: style.highlight,
       }).setOrigin(0.5).setAlpha(0.6).setScale(0);
@@ -153,12 +153,51 @@ export class MenuScene extends Phaser.Scene {
       });
     });
 
-    // Crown on "O" (index 2) - big, sits directly on top
-    const crownX = blockStartX + 2 * blockSpacing;
-    const crown = this.add.text(crownX, row1Y - 65, '👑', {
-      fontSize: '56px',
-      shadow: { offsetX: 0, offsetY: 4, color: '#000000', blur: 0, fill: true, alpha: 0.3 }
-    }).setOrigin(0.5).setScale(0);
+    // Custom Vector Crown on top center
+    const crown = this.add.graphics();
+    const cx = blockStartX + 2 * blockSpacing;
+    const cy = row1Y - 70;
+    crown.setPosition(cx, cy);
+    
+    // Crown Base/Shadow
+    crown.fillStyle(0x000000, 0.4);
+    crown.fillRoundedRect(-35, 26, 70, 12, 6);
+
+    // Crown Body
+    crown.fillStyle(0xFFCC00, 1);
+    crown.lineStyle(4, 0xCC7700, 1);
+    crown.beginPath();
+    crown.moveTo(-35, 25);
+    crown.lineTo(-45, -15);
+    crown.lineTo(-15, 0);
+    crown.lineTo(0, -35);
+    crown.lineTo(15, 0);
+    crown.lineTo(45, -15);
+    crown.lineTo(35, 25);
+    crown.closePath();
+    crown.fillPath();
+    crown.strokePath();
+
+    crown.fillRoundedRect(-35, 25, 70, 12, 4);
+    crown.strokeRoundedRect(-35, 25, 70, 12, 4);
+
+    // Jewels
+    crown.fillStyle(0xFFFFFF, 0.9);
+    crown.fillCircle(0, -35, 6);
+    crown.fillCircle(-45, -15, 5);
+    crown.fillCircle(45, -15, 5);
+    
+    // Inner diamond jewel
+    crown.fillStyle(0xFFEE88, 1);
+    crown.beginPath();
+    crown.moveTo(0, 5);
+    crown.lineTo(-6, 12);
+    crown.lineTo(0, 19);
+    crown.lineTo(6, 12);
+    crown.closePath();
+    crown.fillPath();
+
+    crown.setScale(0);
     logoContainer.add(crown);
 
     this.tweens.add({
@@ -166,20 +205,20 @@ export class MenuScene extends Phaser.Scene {
       duration: 400, delay: 400, ease: 'Back.easeOut'
     });
     this.tweens.add({
-      targets: crown, y: crown.y - 6,
+      targets: crown, y: cy - 8,
       duration: 1600, yoyo: true, repeat: -1,
       ease: 'Sine.easeInOut', delay: 900
     });
 
     // "BURST" - bold, bright cyan, beveled solid 3D style
     const dropY = row2Y;
-    const dropFontSize = 68;
+    const dropFontSize = 85;
 
     // Solid dark navy base to anchor it
-    const burstDeep = this.add.text(W / 2, dropY + 14, 'BURST', {
+    const burstDeep = this.add.text(W / 2, dropY + 16, 'BURST', {
       fontSize: `${dropFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: '900', color: '#001133',
-      stroke: '#001133', strokeThickness: 20
+      stroke: '#001133', strokeThickness: 24
     }).setOrigin(0.5);
     logoContainer.add(burstDeep);
 
@@ -187,16 +226,16 @@ export class MenuScene extends Phaser.Scene {
     const burstShadow = this.add.text(W / 2, dropY + 8, 'BURST', {
       fontSize: `${dropFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
       fontStyle: '900', color: '#0055AA',
-      stroke: '#0055AA', strokeThickness: 16
+      stroke: '#0055AA', strokeThickness: 20
     }).setOrigin(0.5);
     logoContainer.add(burstShadow);
 
     // Main BURST text - bright vivid cyan with crisp stroke
     const dropText = this.add.text(W / 2, dropY, 'BURST', {
       fontSize: `${dropFontSize}px`, fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-      fontStyle: '900', color: '#66FFFF',
-      stroke: '#0088DD', strokeThickness: 8,
-      shadow: { offsetX: 0, offsetY: 0, color: '#00FFFF', blur: 10, fill: true, alpha: 0.5 }
+      fontStyle: '900', color: '#44EEFF',
+      stroke: '#0077CC', strokeThickness: 8,
+      shadow: { offsetX: 0, offsetY: 0, color: '#00FFFF', blur: 15, fill: true, alpha: 0.6 }
     }).setOrigin(0.5).setAlpha(0).setScale(0);
     logoContainer.add(dropText);
 
@@ -214,6 +253,72 @@ export class MenuScene extends Phaser.Scene {
       duration: 350, delay: 400,
       ease: 'Back.easeOut'
     });
+
+    // "PUZZLE GAME" subtitle on a vector purple ribbon
+    const subY = dropY + 75;
+    const rw = 280; // Ribbon width
+    const rh = 40;  // Ribbon height
+    const rx = W / 2 - rw / 2;
+    const ry = subY - rh / 2;
+
+    const ribbonGfx = this.add.graphics().setAlpha(0);
+    
+    // Ribbon folds (dark purple shadows behind)
+    ribbonGfx.fillStyle(0x330088, 1);
+    ribbonGfx.beginPath();
+    ribbonGfx.moveTo(rx + 20, ry + rh);
+    ribbonGfx.lineTo(rx + 20, ry + rh + 15);
+    ribbonGfx.lineTo(rx + 45, ry + rh);
+    ribbonGfx.closePath();
+    ribbonGfx.fillPath();
+
+    ribbonGfx.beginPath();
+    ribbonGfx.moveTo(rx + rw - 20, ry + rh);
+    ribbonGfx.lineTo(rx + rw - 20, ry + rh + 15);
+    ribbonGfx.lineTo(rx + rw - 45, ry + rh);
+    ribbonGfx.closePath();
+    ribbonGfx.fillPath();
+
+    // Ribbon tails
+    ribbonGfx.fillStyle(0x5511BB, 1);
+    ribbonGfx.beginPath();
+    ribbonGfx.moveTo(rx + 25, ry + 10);
+    ribbonGfx.lineTo(rx - 25, ry + 10);
+    ribbonGfx.lineTo(rx - 10, ry + rh / 2);
+    ribbonGfx.lineTo(rx - 25, ry + rh - 5);
+    ribbonGfx.lineTo(rx + 25, ry + rh - 5);
+    ribbonGfx.closePath();
+    ribbonGfx.fillPath();
+
+    ribbonGfx.beginPath();
+    ribbonGfx.moveTo(rx + rw - 25, ry + 10);
+    ribbonGfx.lineTo(rx + rw + 25, ry + 10);
+    ribbonGfx.lineTo(rx + rw + 10, ry + rh / 2);
+    ribbonGfx.lineTo(rx + rw + 25, ry + rh - 5);
+    ribbonGfx.lineTo(rx + rw - 25, ry + rh - 5);
+    ribbonGfx.closePath();
+    ribbonGfx.fillPath();
+
+    // Main ribbon body
+    ribbonGfx.fillStyle(0x7722EE, 1);
+    ribbonGfx.fillRoundedRect(rx, ry, rw, rh, 16);
+    // Ribbon highlight
+    ribbonGfx.fillStyle(0x9955FF, 1);
+    ribbonGfx.fillRoundedRect(rx + 4, ry + 4, rw - 8, rh / 2, 10);
+
+    logoContainer.add(ribbonGfx);
+
+    const subtitle = this.add.text(W / 2, subY, 'PUZZLE GAME', {
+      fontSize: '26px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
+      fontStyle: '900', color: '#FFFFFF',
+      shadow: { offsetX: 0, offsetY: 2, color: '#330088', blur: 0, fill: true }
+    }).setOrigin(0.5).setAlpha(0);
+    logoContainer.add(subtitle);
+
+    this.tweens.add({
+      targets: [ribbonGfx, subtitle], alpha: 1,
+      duration: 500, delay: 800, ease: 'Power2'
+    });
     
     // Smooth floating animation for the entire logo container
     this.tweens.add({
@@ -225,20 +330,6 @@ export class MenuScene extends Phaser.Scene {
       ease: 'Sine.easeInOut'
     });
 
-    // "PUZZLE GAME" subtitle
-    const subY = dropY + 80;
-    const subtitle = this.add.text(W / 2, subY, 'P U Z Z L E   G A M E', {
-      fontSize: '18px', fontFamily: '"Fredoka", "Baloo 2", sans-serif',
-      fontStyle: '900', color: '#FFFFFF',
-      stroke: '#003388', strokeThickness: 4,
-      shadow: { offsetX: 0, offsetY: 3, color: '#000000', blur: 0, fill: true, alpha: 0.5 }
-    }).setOrigin(0.5).setDepth(10).setAlpha(0);
-
-    this.tweens.add({
-      targets: subtitle, alpha: 1,
-      duration: 500, delay: 800, ease: 'Power2'
-    });
-
     // High score pill
     const tempSM = new ScoreManager();
     const hs = tempSM.getHighScore();
@@ -247,7 +338,7 @@ export class MenuScene extends Phaser.Scene {
       const pillH = 46;
       const pillR = 23;
       const pillX = W / 2 - pillW / 2 + 10;
-      const pillY = subY + 25;
+      const pillY = subY + 35; // Moved down slightly to accommodate ribbon
 
       const bestBg = this.add.container(0, 0).setDepth(10).setAlpha(0);
       
