@@ -25,11 +25,14 @@ export class BootScene extends Phaser.Scene {
     this.load.audio('devlanceStudio', 'assets/audio/devlance_studio_sound.wav');
     
     // Voiceovers
+    this.load.audio('voice_wow', 'assets/audio/voice_wow.mp3');
     this.load.audio('voice_good', 'assets/audio/voice_good.mp3');
     this.load.audio('voice_great', 'assets/audio/voice_great.mp3');
+    this.load.audio('voice_excellent', 'assets/audio/voice_excellent.mp3');
     this.load.audio('voice_amazing', 'assets/audio/voice_amazing.mp3');
-    this.load.audio('voice_awesome', 'assets/audio/voice_awesome.mp3');
     this.load.audio('voice_wonderful', 'assets/audio/voice_wonderful.mp3');
+    this.load.audio('voice_genius', 'assets/audio/voice_genius.mp3');
+    this.load.audio('voice_master', 'assets/audio/voice_master.mp3');
   }
 
   create() {
