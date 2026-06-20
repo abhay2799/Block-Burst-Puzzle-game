@@ -159,12 +159,10 @@ export const AdManager = {
     AdMob.addListener('bannerAdFailedToLoad', (info) => {
       console.warn('[AdManager] ❌ Banner FAILED to load:', JSON.stringify(info));
       bannerShowing = false;
-      // Retry after delay
-      if (this._bannerRetryCount < MAX_RETRY_ATTEMPTS) {
-        this._bannerRetryCount++;
-        console.log(`[AdManager] Banner retry ${this._bannerRetryCount}/${MAX_RETRY_ATTEMPTS} in ${RETRY_DELAY_MS}ms`);
-        setTimeout(() => this.showBanner(), RETRY_DELAY_MS);
-      }
+      // Always retry banner ads after delay so it always appears eventually
+      this._bannerRetryCount++;
+      console.log(`[AdManager] Banner retry ${this._bannerRetryCount} in ${RETRY_DELAY_MS}ms`);
+      setTimeout(() => this.showBanner(), RETRY_DELAY_MS);
     });
 
     // ─── Interstitial listeners ───
@@ -192,6 +190,7 @@ export const AdManager = {
 
     AdMob.addListener('interstitialAdShowed', () => {
       console.log('[AdManager] Interstitial ad showed');
+      this.hideBanner();
     });
 
     AdMob.addListener('interstitialAdFailedToShow', (info) => {
@@ -215,6 +214,7 @@ export const AdManager = {
         this._interstitialCallback();
         this._interstitialCallback = null;
       }
+      setTimeout(() => this.showBanner(), 500);
     });
 
     // ─── Rewarded Video listeners ───
@@ -240,6 +240,7 @@ export const AdManager = {
 
     AdMob.addListener(RewardAdPluginEvents.Showed, () => {
       console.log('[AdManager] Rewarded ad showed');
+      this.hideBanner();
     });
 
     AdMob.addListener(RewardAdPluginEvents.FailedToShow, (info) => {
@@ -267,6 +268,7 @@ export const AdManager = {
         this._rewardCallback(this._userEarnedReward);
         this._rewardCallback = null;
       }
+      setTimeout(() => this.showBanner(), 500);
     });
   },
 
