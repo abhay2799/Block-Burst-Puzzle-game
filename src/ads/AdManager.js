@@ -159,9 +159,6 @@ export const AdManager = {
 
     AdMob.addListener('bannerAdFailedToLoad', async (info) => {
       console.warn('[AdManager] ❌ Banner FAILED to load:', JSON.stringify(info));
-      
-      // Temporary: Show exact AdMob error on screen for debugging
-      alert("Banner Ad Failed to Load: " + JSON.stringify(info));
 
       bannerShowing = false;
       bannerCreated = false;
