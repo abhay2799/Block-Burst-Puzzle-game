@@ -28,7 +28,7 @@ const config = {
     clearBeforeRender: true
   },
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.ENVELOP,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   input: {
