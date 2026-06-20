@@ -25,17 +25,18 @@ export class SplashScene extends Phaser.Scene {
     const nameTargetY = cy - 20;
     const studioTargetY = cy + 30;
 
+    // Render text at 2x size and scale down for ultimate sharpness
     const name = this.add.text(cx, nameTargetY + 15, 'DEVLANCE', {
-      fontSize: '48px', fontFamily: '"Arial Black", Impact, sans-serif',
-      fontStyle: '900', color: '#ffffff', align: 'center', resolution: 4
-    }).setOrigin(0.5, 0.5).setLetterSpacing(6).setAlpha(0); 
+      fontSize: '96px', fontFamily: '"Arial Black", Impact, sans-serif',
+      fontStyle: '900', color: '#ffffff', align: 'center', resolution: 3
+    }).setOrigin(0.5, 0.5).setLetterSpacing(12).setScale(0.5).setAlpha(0); 
 
     const studio = this.add.text(cx, studioTargetY + 10, 'STUDIO', {
-      fontSize: '20px', fontFamily: '"Arial", Helvetica, sans-serif',
-      fontStyle: 'bold', color: '#888888', align: 'center', resolution: 4
-    }).setOrigin(0.5, 0.5).setLetterSpacing(20).setAlpha(0);
+      fontSize: '40px', fontFamily: '"Arial", Helvetica, sans-serif',
+      fontStyle: 'bold', color: '#888888', align: 'center', resolution: 3
+    }).setOrigin(0.5, 0.5).setLetterSpacing(40).setScale(0.5).setAlpha(0);
 
-    // The signature yellow line
+    // The signature yellow line (2px exact height)
     const divider = this.add.rectangle(cx, cy + 4, 240, 2, 0xFFB300).setOrigin(0.5, 0.5).setScale(0, 1);
 
     const container = this.add.container(0, 0, [name, studio, divider]);
@@ -58,9 +59,22 @@ export class SplashScene extends Phaser.Scene {
             ease: 'Cubic.easeOut'
           });
 
-          // Step 3: Very slow, premium cinematic zoom using the hardware camera
-          // This avoids the subpixel text jitter caused by scaling a container
-          this.cameras.main.zoomTo(1.05, 2500, 'Sine.easeOut');
+          // Step 3: Very slow cinematic zoom by scaling individual elements
+          // This keeps the line exactly 2px high and text perfectly crisp
+          this.tweens.add({
+            targets: [name, studio],
+            scaleX: 0.525,
+            scaleY: 0.525,
+            duration: 2500,
+            ease: 'Sine.easeOut'
+          });
+          
+          this.tweens.add({
+            targets: divider,
+            scaleX: 1.05,
+            duration: 2500,
+            ease: 'Sine.easeOut'
+          });
         }
       });
     });
