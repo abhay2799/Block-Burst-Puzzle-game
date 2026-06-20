@@ -1,11 +1,10 @@
 import os
 
-# We'll use RogerNeural which is listed as "Lively" or GuyNeural "Passion"
-# Let's use GuyNeural with increased rate and pitch for an excited tone.
-voice = "en-US-RogerNeural"
+# We will use GuyNeural which is a natural, deep male voice.
+# We REMOVE the pitch and rate modifiers so it sounds 100% human and NOT robotic/fast.
+voice = "en-US-GuyNeural"
 words = ["wow", "good", "great", "excellent", "amazing", "wonderful", "genius", "master"]
 
 for word in words:
-    # +15% rate and +25Hz pitch makes it sound more energetic and excited
-    cmd = f'python -m edge_tts --voice {voice} --rate=+15% --pitch=+25Hz --text "{word.capitalize()}!" --write-media "public/assets/audio/voice_{word}.mp3"'
+    cmd = f'python -m edge_tts --voice {voice} --text "{word.capitalize()}!" --write-media "public/assets/audio/voice_{word}.mp3"'
     os.system(cmd)
